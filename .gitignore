@@ -1,0 +1,43 @@
+# Generated files
+*.csv
+*.jpg
+*.png
+id_faces*/
+output.jpg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+*.whl
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MiMo Code
+.mimocode/
+
+# Project specific
+models/*.dat
+models/*.bz2

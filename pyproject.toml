@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "face-faker"
+dynamic = ["version"]
+description = "AI-powered face image generator for creating fake identities"
+readme = "README.md"
+license = {text = "Proprietary"}
+requires-python = ">=3.8"
+authors = [
+    {name = "Ali Sadeghi", email = "ali.sadeghi@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+]
+dependencies = [
+    "Pillow>=9.0",
+    "requests>=2.28",
+    "tqdm>=4.64",
+]
+
+[project.optional-dependencies]
+full = [
+    "deepface>=0.0.79",
+    "opencv-python>=4.6",
+    "numpy>=1.23",
+    "rembg>=2.0.50",
+    "dlib>=19.24",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/alisadeghi/face-faker"
+Repository = "https://github.com/alisadeghi/face-faker"
+
+[project.scripts]
+face-faker = "face_faker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "face_faker._version.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
