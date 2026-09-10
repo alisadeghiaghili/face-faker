@@ -54,6 +54,7 @@ Default region is the full frame (`0..1`), so position filtering is opt-in.
 - v3.1.0 — roll/tilt threshold participates in frontal acceptance.
 - v3.2.0 — per-direction pose limits (L/R/U/D) + face-center region filter.
 - v3.3.0 — local directory source, TPNDE retry/backoff, ruff+mypy CI.
+- v3.4.0 — CLI progress, gender_max_share balancing, source_ref provenance, vision CI job.
 
 ## Gender
 
