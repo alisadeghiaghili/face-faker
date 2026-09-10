@@ -179,6 +179,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show a progress bar while generating",
     )
     gen.add_argument(
+        "--prefetch-workers",
+        type=int,
+        default=1,
+        help="Concurrent source fetch threads (default: 1 = sequential)",
+    )
+    gen.add_argument(
+        "--prefetch-buffer",
+        type=int,
+        default=4,
+        help="In-flight prefetch queue depth (default: 4)",
+    )
+    gen.add_argument(
         "--no-gender",
         action="store_true",
         help="Skip gender classification",
@@ -251,6 +263,8 @@ def cmd_generate(args: argparse.Namespace) -> int:
         source_backoff_s=args.source_backoff,
         source_shuffle=args.source_shuffle,
         gender_max_share=args.gender_max_share,
+        prefetch_workers=args.prefetch_workers,
+        prefetch_buffer=args.prefetch_buffer,
     )
 
     progress_cb = _make_progress_callback(config.count) if args.progress else None

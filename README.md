@@ -114,6 +114,25 @@ result = generate_faces(
 face-faker generate --count 30 --source-dir ./datasets/faces --source-shuffle
 ```
 
+## Parallel fetch (prefetch)
+
+Overlap source I/O with pose/gender work:
+
+```python
+result = generate_faces(
+    "out/fast",
+    count=50,
+    prefetch_workers=4,
+    prefetch_buffer=8,
+)
+```
+
+```bash
+face-faker generate --count 50 --prefetch-workers 4 --prefetch-buffer 8 --progress
+```
+
+Default `prefetch_workers=1` keeps fetch sequential (safe and simple).
+
 ## Balancing & provenance
 
 ```python

@@ -52,6 +52,8 @@ def generate_faces(
     source_backoff_s: float = 0.25,
     source_shuffle: bool = False,
     gender_max_share: float | None = None,
+    prefetch_workers: int = 1,
+    prefetch_buffer: int = 4,
     config: GenerationConfig | None = None,
     progress: Any | None = None,
 ) -> GenerationResult:
@@ -89,6 +91,8 @@ def generate_faces(
         source_backoff_s: Base seconds between TPNDE retries.
         source_shuffle: Shuffle local directory listing once.
         gender_max_share: Cap on male/female share of produced images.
+        prefetch_workers: Concurrent source fetch threads (1 = sequential).
+        prefetch_buffer: In-flight prefetch queue depth.
         config: Full config object; when set, other fields are ignored.
         progress: Optional ``(produced, requested)`` callback for UI progress.
 
@@ -153,6 +157,8 @@ def generate_faces(
             source_backoff_s=source_backoff_s,
             source_shuffle=source_shuffle,
             gender_max_share=gender_max_share,
+            prefetch_workers=prefetch_workers,
+            prefetch_buffer=prefetch_buffer,
         )
     return _generate_faces(config, progress=progress)
 

@@ -40,29 +40,58 @@ logger = get_logger("application.generate")
 ProgressCallback = Callable[[int, int], None]
 
 
-def _build_default_source(config: GenerationConfig) -> FaceSource:
+def _build_default_source(config: GenerationConfig) -> Any:
     """Construct the default face source from ``config``.
 
     When ``config.source_dir`` is set, reads a local image folder; otherwise
-    uses TPNDE with configured retries/backoff.
+    uses TPNDE with configured retries/backoff. Wraps the source in a
+    prefetch pool when ``prefetch_workers > 1``.
 
     Args:
         config: Generation settings.
 
     Returns:
-        A concrete :class:`FaceSource` adapter.
+        A concrete face source adapter (possibly prefetching).
     """
     if config.source_dir is not None:
         from face_faker.infrastructure.sources.local_dir import LocalDirectorySource
 
-        return LocalDirectorySource(config.source_dir, shuffle=config.source_shuffle)
+        inner: Any = LocalDirectorySource(config.source_dir, shuffle=config.source_shuffle)
+    else:
+        from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource
 
-    from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource
+        inner = ThisPersonDoesNotExistSource(
+            retries=config.source_retries,
+            backoff_s=config.source_backoff_s,
+        )
 
-    return ThisPersonDoesNotExistSource(
-        retries=config.source_retries,
-        backoff_s=config.source_backoff_s,
-    )
+    if config.prefetch_workers > 1:
+        from face_faker.infrastructure.sources.prefetch import PrefetchingFaceSource
+
+        return PrefetchingFaceSource(
+            inner,
+            max_workers=config.prefetch_workers,
+            max_buffer=config.prefetch_buffer,
+        )
+    return inner
+
+
+def _fetch_pair(source: Any) -> tuple[Any | None, str | None]:
+    """Fetch one item and optional provenance ref from ``source``.
+
+    Args:
+        source: Face source adapter.
+
+    Returns:
+        ``(image_or_None, source_ref_or_None)``.
+    """
+    fetch_item = getattr(source, "fetch_item", None)
+    if callable(fetch_item):
+        raw, ref = fetch_item()
+        return raw, (str(ref) if ref is not None else None)
+    image = source.fetch()
+    ref = getattr(source, "last_source_ref", None)
+    return image, (str(ref) if ref is not None else None)
 
 
 def _to_rgb(image: Any) -> Image.Image:
@@ -203,7 +232,7 @@ def generate_faces(
     while len(records) < config.count and attempts < config.max_attempts:
         attempts += 1
         try:
-            raw = source.fetch()
+            raw, source_ref = _fetch_pair(source)
         except Exception as exc:  # noqa: BLE001 - isolate source failures
             logger.warning("Source error on attempt %s: %s", attempts, exc)
             failed_fetches += 1
@@ -212,10 +241,6 @@ def generate_faces(
         if raw is None:
             failed_fetches += 1
             continue
-
-        source_ref = getattr(source, "last_source_ref", None)
-        if source_ref is not None:
-            source_ref = str(source_ref)
 
         try:
             image = _to_rgb(raw)
@@ -302,6 +327,10 @@ def generate_faces(
 
         if progress is not None:
             progress(len(records), config.count)
+
+    shutdown = getattr(source, "shutdown", None)
+    if callable(shutdown):
+        shutdown(wait=False)
 
     elapsed = time.perf_counter() - started
     stats = GenerationStats(
