@@ -21,6 +21,9 @@ CSV_FIELDNAMES = (
     "yaw",
     "pitch",
     "roll",
+    "center_x",
+    "center_y",
+    "source_ref",
 )
 
 

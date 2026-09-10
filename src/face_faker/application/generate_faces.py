@@ -153,7 +153,10 @@ def generate_faces(
         2
     """
     if source is None:
-        source = _build_default_source(config)
+        try:
+            source = _build_default_source(config)
+        except (FileNotFoundError, ValueError) as exc:
+            raise SourceUnavailableError(str(exc)) from exc
 
     if frontal_filter is None and config.frontal_only:
         from face_faker.infrastructure.vision.dlib_frontal import DlibSolvePnPFrontalFilter
