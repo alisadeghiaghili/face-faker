@@ -64,7 +64,7 @@ print(result.stats.produced, result.stats.gender_female)
 print(result.records[0].to_metadata())
 ```
 
-Frontal-only with explicit pose thresholds:
+Frontal-only with per-direction rotation limits and face-center region:
 
 ```python
 from face_faker import generate_faces
@@ -73,9 +73,17 @@ result = generate_faces(
     "out/frontal",
     count=50,
     frontal_only=True,
-    yaw_threshold=12.0,    # left/right turn
-    pitch_threshold=15.0,  # up/down gaze
-    roll_threshold=10.0,   # in-plane head tilt
+    # rotation (degrees) — four directions + tilt
+    yaw_left_threshold=12.0,    # turn toward subject's left
+    yaw_right_threshold=8.0,    # turn toward subject's right
+    pitch_up_threshold=6.0,     # looking up
+    pitch_down_threshold=10.0,  # looking down
+    roll_threshold=8.0,         # in-plane head tilt
+    # face position in frame (normalized 0..1)
+    face_center_x_min=0.30,
+    face_center_x_max=0.70,
+    face_center_y_min=0.20,
+    face_center_y_max=0.80,
     strict_completion=True,
 )
 ```
@@ -85,7 +93,11 @@ result = generate_faces(
 ```bash
 face-faker generate --count 20 --output-dir ./faces
 face-faker generate --count 50 --frontal-only \
-  --yaw-threshold 12 --pitch-threshold 15 --roll-threshold 10
+  --yaw-left 12 --yaw-right 8 \
+  --pitch-up 6 --pitch-down 10 \
+  --roll-threshold 8 \
+  --face-x-min 0.3 --face-x-max 0.7 \
+  --face-y-min 0.2 --face-y-max 0.8
 face-faker generate --count 10 --remove-bg --color
 face-faker info
 python -m face_faker --version
@@ -129,9 +141,19 @@ out/faces/
     "yaw": 3.21,
     "pitch": -1.05,
     "roll": 0.4,
-    "yaw_threshold": 15.0,
-    "pitch_threshold": 15.0,
-    "roll_threshold": 15.0
+    "limits": {
+      "yaw_left": 15.0,
+      "yaw_right": 15.0,
+      "pitch_up": 15.0,
+      "pitch_down": 15.0,
+      "roll": 15.0
+    },
+    "box": {
+      "center_x": 0.51,
+      "center_y": 0.42,
+      "width_ratio": 0.28,
+      "height_ratio": 0.36
+    }
   }
 }
 ```
@@ -143,9 +165,12 @@ out/faces/
 | `count` | 100 |
 | `remove_bg` | `false` |
 | `frontal_only` | `false` |
-| `yaw_threshold` | `15.0` degrees (turn) |
-| `pitch_threshold` | `15.0` degrees (up/down gaze) |
-| `roll_threshold` | `15.0` degrees (head tilt) |
+| `pose_limits.yaw_left` | `15.0` degrees |
+| `pose_limits.yaw_right` | `15.0` degrees |
+| `pose_limits.pitch_up` | `15.0` degrees |
+| `pose_limits.pitch_down` | `15.0` degrees |
+| `pose_limits.roll` | `15.0` degrees |
+| `face_region` | full frame `[0,1] × [0,1]` |
 | `classify_gender` | `true` |
 | `grayscale` | `true` |
 | `save_metadata` | `true` |

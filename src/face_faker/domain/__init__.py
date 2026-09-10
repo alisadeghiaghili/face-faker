@@ -5,11 +5,14 @@ adapters implement the ports defined here.
 """
 
 from face_faker.domain.entities import (
+    FaceBox,
+    FaceRegion,
     FrontalMetrics,
     GenerationConfig,
     GenerationResult,
     GenerationStats,
     ImageRecord,
+    PoseLimits,
 )
 from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 from face_faker.domain.errors import (
@@ -30,7 +33,9 @@ from face_faker.domain.ports import (
 __all__ = [
     "BackgroundRemover",
     "DependencyError",
+    "FaceBox",
     "FaceFakerError",
+    "FaceRegion",
     "FaceSource",
     "FaceStore",
     "FrontalFilter",
@@ -44,5 +49,6 @@ __all__ = [
     "ImageRecord",
     "MetadataSchemaVersion",
     "MissingModelError",
+    "PoseLimits",
     "SourceUnavailableError",
 ]

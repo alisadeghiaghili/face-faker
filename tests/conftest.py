@@ -9,7 +9,12 @@ from unittest.mock import MagicMock
 import pytest
 from PIL import Image
 
-from face_faker.domain.entities import FrontalMetrics, GenerationConfig
+from face_faker.domain.entities import (
+    FaceBox,
+    FrontalMetrics,
+    GenerationConfig,
+    PoseLimits,
+)
 from face_faker.domain.enums import GenderLabel
 
 
@@ -98,18 +103,21 @@ def frontal(
     pitch: float = 0.0,
     roll: float = 0.0,
     threshold: float = 15.0,
-    roll_threshold: float | None = None,
+    limits: PoseLimits | None = None,
+    center_x: float = 0.5,
+    center_y: float = 0.5,
+    box: FaceBox | None = None,
 ) -> FrontalMetrics:
-    """Build frontal metrics with the given angles and thresholds."""
-    rt = threshold if roll_threshold is None else roll_threshold
+    """Build frontal metrics with angles, limits, and normalized face box."""
+    pose_limits = limits or PoseLimits.symmetric(threshold, threshold, threshold)
+    face_box = box or FaceBox(center_x, center_y, 0.25, 0.35)
     return FrontalMetrics(
         method="solvepnp",
         yaw=yaw,
         pitch=pitch,
         roll=roll,
-        yaw_threshold=threshold,
-        pitch_threshold=threshold,
-        roll_threshold=rt,
+        limits=pose_limits,
+        box=face_box,
     )
 
 

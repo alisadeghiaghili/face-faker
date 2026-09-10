@@ -10,11 +10,14 @@ Public surface:
 
 from face_faker._version import __version__
 from face_faker.domain.entities import (
+    FaceBox,
+    FaceRegion,
     FrontalMetrics,
     GenerationConfig,
     GenerationResult,
     GenerationStats,
     ImageRecord,
+    PoseLimits,
 )
 from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 from face_faker.domain.errors import (
@@ -28,7 +31,9 @@ from face_faker.interfaces.api import generate_faces, generate_id_faces
 
 __all__ = [
     "DependencyError",
+    "FaceBox",
     "FaceFakerError",
+    "FaceRegion",
     "FrontalMetrics",
     "GenderLabel",
     "GenerationConfig",
@@ -38,6 +43,7 @@ __all__ = [
     "ImageRecord",
     "MetadataSchemaVersion",
     "MissingModelError",
+    "PoseLimits",
     "SourceUnavailableError",
     "__version__",
     "generate_faces",

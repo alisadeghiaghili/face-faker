@@ -8,7 +8,7 @@ import sys
 from typing import Optional, Sequence
 
 from face_faker._version import __version__
-from face_faker.domain.entities import GenerationConfig
+from face_faker.domain.entities import FaceRegion, GenerationConfig, PoseLimits
 from face_faker.domain.errors import FaceFakerError
 from face_faker.logging_config import configure_cli_logging, get_logger
 from face_faker.interfaces.api import generate_faces
@@ -62,22 +62,58 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep only frontal poses (requires dlib + OpenCV)",
     )
     gen.add_argument(
-        "--yaw-threshold",
+        "--yaw-left",
         type=float,
         default=15.0,
-        help="Absolute yaw threshold in degrees (default: 15)",
+        help="Max yaw toward subject's left, degrees (default: 15)",
     )
     gen.add_argument(
-        "--pitch-threshold",
+        "--yaw-right",
         type=float,
         default=15.0,
-        help="Absolute pitch (up/down gaze) threshold in degrees (default: 15)",
+        help="Max |yaw| toward subject's right, degrees (default: 15)",
+    )
+    gen.add_argument(
+        "--pitch-up",
+        type=float,
+        default=15.0,
+        help="Max looking-up pitch, degrees (default: 15)",
+    )
+    gen.add_argument(
+        "--pitch-down",
+        type=float,
+        default=15.0,
+        help="Max |looking-down| pitch, degrees (default: 15)",
     )
     gen.add_argument(
         "--roll-threshold",
         type=float,
         default=15.0,
-        help="Absolute roll (head tilt) threshold in degrees (default: 15)",
+        help="Max absolute head tilt, degrees (default: 15)",
+    )
+    gen.add_argument(
+        "--face-x-min",
+        type=float,
+        default=0.0,
+        help="Min face-center X in [0,1] — left bound (default: 0)",
+    )
+    gen.add_argument(
+        "--face-x-max",
+        type=float,
+        default=1.0,
+        help="Max face-center X in [0,1] — right bound (default: 1)",
+    )
+    gen.add_argument(
+        "--face-y-min",
+        type=float,
+        default=0.0,
+        help="Min face-center Y in [0,1] — top bound (default: 0)",
+    )
+    gen.add_argument(
+        "--face-y-max",
+        type=float,
+        default=1.0,
+        help="Max face-center Y in [0,1] — bottom bound (default: 1)",
     )
     gen.add_argument(
         "--no-gender",
@@ -129,9 +165,19 @@ def cmd_generate(args: argparse.Namespace) -> int:
         save_metadata=not args.no_metadata,
         remove_bg=args.remove_bg,
         frontal_only=args.frontal_only,
-        yaw_threshold=args.yaw_threshold,
-        pitch_threshold=args.pitch_threshold,
-        roll_threshold=args.roll_threshold,
+        pose_limits=PoseLimits(
+            yaw_left=args.yaw_left,
+            yaw_right=args.yaw_right,
+            pitch_up=args.pitch_up,
+            pitch_down=args.pitch_down,
+            roll=args.roll_threshold,
+        ),
+        face_region=FaceRegion(
+            center_x_min=args.face_x_min,
+            center_x_max=args.face_x_max,
+            center_y_min=args.face_y_min,
+            center_y_max=args.face_y_max,
+        ),
         classify_gender=not args.no_gender,
         require_gender=args.require_gender,
         grayscale=not args.color,

@@ -9,74 +9,321 @@ from typing import Any, Mapping, Sequence
 from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 
 
+def _require_non_negative(name: str, value: float) -> None:
+    """Raise ``ValueError`` when ``value`` is negative.
+
+    Args:
+        name: Field name used in the error message.
+        value: Numeric value to validate.
+
+    Raises:
+        ValueError: If ``value`` is less than zero.
+    """
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0, got {value}")
+
+
 @dataclass(frozen=True)
-class FrontalMetrics:
-    """Head-pose metrics produced by a :class:`FrontalFilter`.
+class PoseLimits:
+    """Per-direction head-pose limits in degrees.
 
-    Angle semantics (degrees):
+    Sign convention matches solvePnP output:
 
-    - ``yaw``: left/right head turn
-    - ``pitch``: up/down gaze (nod)
-    - ``roll``: in-plane tilt (ear-to-shoulder)
+    - ``yaw > 0``: subject turns toward their left (image right)
+    - ``yaw < 0``: subject turns toward their right
+    - ``pitch > 0``: looking up
+    - ``pitch < 0``: looking down
+    - ``roll``: in-plane tilt (absolute value compared)
 
     Attributes:
-        method: Algorithm identifier (``"solvepnp"`` for the v3 filter).
-        yaw: Yaw angle in degrees (positive = subject's left / image right).
-        pitch: Pitch angle in degrees (positive = typically looking up).
-        roll: Roll/tilt angle in degrees (positive = clockwise in image).
-        yaw_threshold: Absolute yaw acceptance threshold in degrees.
-        pitch_threshold: Absolute pitch acceptance threshold in degrees.
-        roll_threshold: Absolute roll/tilt acceptance threshold in degrees.
+        yaw_left: Max positive yaw (turn toward subject's left).
+        yaw_right: Max magnitude of negative yaw (turn toward subject's right).
+        pitch_up: Max positive pitch (looking up).
+        pitch_down: Max magnitude of negative pitch (looking down).
+        roll: Max absolute roll (head tilt).
+    """
+
+    yaw_left: float = 15.0
+    yaw_right: float = 15.0
+    pitch_up: float = 15.0
+    pitch_down: float = 15.0
+    roll: float = 15.0
+
+    def __post_init__(self) -> None:
+        for name in ("yaw_left", "yaw_right", "pitch_up", "pitch_down", "roll"):
+            _require_non_negative(name, getattr(self, name))
+
+    @classmethod
+    def symmetric(cls, yaw: float, pitch: float, roll: float) -> "PoseLimits":
+        """Build limits where left/right and up/down share one value.
+
+        Args:
+            yaw: Shared yaw limit for both directions.
+            pitch: Shared pitch limit for both directions.
+            roll: Roll/tilt limit.
+
+        Returns:
+            PoseLimits with mirrored thresholds.
+
+        Example:
+            >>> PoseLimits.symmetric(12.0, 10.0, 8.0).yaw_right
+            12.0
+        """
+        return cls(
+            yaw_left=yaw,
+            yaw_right=yaw,
+            pitch_up=pitch,
+            pitch_down=pitch,
+            roll=roll,
+        )
+
+    def yaw_ok(self, yaw: float) -> bool:
+        """Return whether ``yaw`` is within left/right limits.
+
+        Args:
+            yaw: Yaw angle in degrees.
+
+        Returns:
+            True when the yaw direction's limit is respected.
+        """
+        return yaw <= self.yaw_left if yaw >= 0 else (-yaw) <= self.yaw_right
+
+    def pitch_ok(self, pitch: float) -> bool:
+        """Return whether ``pitch`` is within up/down limits.
+
+        Args:
+            pitch: Pitch angle in degrees.
+
+        Returns:
+            True when the pitch direction's limit is respected.
+        """
+        return pitch <= self.pitch_up if pitch >= 0 else (-pitch) <= self.pitch_down
+
+    def roll_ok(self, roll: float) -> bool:
+        """Return whether absolute roll is within the tilt limit.
+
+        Args:
+            roll: Roll angle in degrees.
+
+        Returns:
+            True when tilt is acceptable.
+        """
+        return abs(roll) <= self.roll
+
+    def allows(self, yaw: float, pitch: float, roll: float) -> bool:
+        """Return whether all three rotation axes are acceptable.
+
+        Args:
+            yaw: Yaw degrees.
+            pitch: Pitch degrees.
+            roll: Roll degrees.
+
+        Returns:
+            True when yaw, pitch, and roll each pass their direction limit.
+
+        Example:
+            >>> PoseLimits(10, 5, 8, 4, 12).allows(7.0, -3.0, 10.0)
+            True
+            >>> PoseLimits(10, 5, 8, 4, 12).allows(7.0, -3.0, 20.0)
+            False
+        """
+        return self.yaw_ok(yaw) and self.pitch_ok(pitch) and self.roll_ok(roll)
+
+    def to_metadata(self) -> dict[str, float]:
+        """Serialize limits for metadata consumers.
+
+        Returns:
+            JSON-ready mapping of every direction limit.
+        """
+        return {
+            "yaw_left": self.yaw_left,
+            "yaw_right": self.yaw_right,
+            "pitch_up": self.pitch_up,
+            "pitch_down": self.pitch_down,
+            "roll": self.roll,
+        }
+
+
+@dataclass(frozen=True)
+class FaceBox:
+    """Normalized face bounding box summary.
+
+    All coordinates are fractions of image width/height in ``[0, 1]``.
+
+    Attributes:
+        center_x: Face-box center X (0 = left edge, 1 = right edge).
+        center_y: Face-box center Y (0 = top edge, 1 = bottom edge).
+        width_ratio: Box width / image width.
+        height_ratio: Box height / image height.
+    """
+
+    center_x: float
+    center_y: float
+    width_ratio: float
+    height_ratio: float
+
+    def to_metadata(self) -> dict[str, float]:
+        """Serialize the box for metadata.
+
+        Returns:
+            JSON-ready rounded geometry mapping.
+        """
+        return {
+            "center_x": round(self.center_x, 4),
+            "center_y": round(self.center_y, 4),
+            "width_ratio": round(self.width_ratio, 4),
+            "height_ratio": round(self.height_ratio, 4),
+        }
+
+
+@dataclass(frozen=True)
+class FaceRegion:
+    """Acceptable face-center region in normalized image coordinates.
+
+    Defaults accept the full frame. Tighten ranges to keep faces
+    toward the left/right/top/bottom of the crop.
+
+    Attributes:
+        center_x_min: Minimum allowed face-center X (inclusive).
+        center_x_max: Maximum allowed face-center X (inclusive).
+        center_y_min: Minimum allowed face-center Y (inclusive).
+        center_y_max: Maximum allowed face-center Y (inclusive).
+    """
+
+    center_x_min: float = 0.0
+    center_x_max: float = 1.0
+    center_y_min: float = 0.0
+    center_y_max: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.center_x_min <= self.center_x_max <= 1.0:
+            raise ValueError("face center X range must satisfy 0 <= min <= max <= 1")
+        if not 0.0 <= self.center_y_min <= self.center_y_max <= 1.0:
+            raise ValueError("face center Y range must satisfy 0 <= min <= max <= 1")
+
+    @property
+    def is_full_frame(self) -> bool:
+        """True when the region accepts the entire image."""
+        return (
+            self.center_x_min <= 0.0
+            and self.center_x_max >= 1.0
+            and self.center_y_min <= 0.0
+            and self.center_y_max >= 1.0
+        )
+
+    def contains(self, box: FaceBox) -> bool:
+        """Return whether a face box center lies inside this region.
+
+        Args:
+            box: Normalized face geometry.
+
+        Returns:
+            True when the center is within min/max bounds.
+
+        Example:
+            >>> FaceRegion(0.3, 0.7, 0.2, 0.8).contains(FaceBox(0.5, 0.4, 0.2, 0.3))
+            True
+            >>> FaceRegion(0.3, 0.7, 0.2, 0.8).contains(FaceBox(0.9, 0.4, 0.2, 0.3))
+            False
+        """
+        return (
+            self.center_x_min <= box.center_x <= self.center_x_max
+            and self.center_y_min <= box.center_y <= self.center_y_max
+        )
+
+    def to_metadata(self) -> dict[str, float]:
+        """Serialize the region for metadata.
+
+        Returns:
+            JSON-ready min/max mapping.
+        """
+        return {
+            "center_x_min": self.center_x_min,
+            "center_x_max": self.center_x_max,
+            "center_y_min": self.center_y_min,
+            "center_y_max": self.center_y_max,
+        }
+
+
+@dataclass(frozen=True)
+class FrontalMetrics:
+    """Head-pose metrics and face geometry from a :class:`FrontalFilter`.
+
+    Attributes:
+        method: Algorithm identifier (``"solvepnp"``).
+        yaw: Yaw angle in degrees.
+        pitch: Pitch angle in degrees.
+        roll: Roll/tilt angle in degrees.
+        limits: Per-direction pose limits used for acceptance.
+        box: Normalized face box (center + size ratios).
     """
 
     method: str
     yaw: float
     pitch: float
     roll: float
-    yaw_threshold: float
-    pitch_threshold: float
-    roll_threshold: float = 15.0
+    limits: PoseLimits
+    box: FaceBox
 
-    def is_frontal(self) -> bool:
-        """Return ``True`` when yaw, pitch, and roll are within thresholds.
+    def is_pose_ok(self) -> bool:
+        """Return whether all rotation directions are within limits.
 
         Returns:
-            Whether the pose is considered frontal under stored thresholds.
+            True when yaw (L/R), pitch (U/D), and roll pass.
+        """
+        return self.limits.allows(self.yaw, self.pitch, self.roll)
+
+    def is_in_region(self, region: FaceRegion | None = None) -> bool:
+        """Return whether the face center lies in ``region``.
+
+        Args:
+            region: Acceptable face-center region. ``None`` accepts all.
+
+        Returns:
+            True when position is acceptable.
+        """
+        if region is None or region.is_full_frame:
+            return True
+        return region.contains(self.box)
+
+    def is_frontal(self, region: FaceRegion | None = None) -> bool:
+        """Return ``True`` when pose and optional region both pass.
+
+        Args:
+            region: Optional face-center region constraint.
+
+        Returns:
+            Combined acceptance decision.
 
         Example:
-            >>> m = FrontalMetrics("solvepnp", 5.0, -3.0, 1.0, 15.0, 15.0, 15.0)
+            >>> limits = PoseLimits(10, 10, 10, 10, 10)
+            >>> box = FaceBox(0.5, 0.5, 0.3, 0.4)
+            >>> m = FrontalMetrics("solvepnp", 2.0, -1.0, 0.5, limits, box)
             >>> m.is_frontal()
             True
-            >>> FrontalMetrics("solvepnp", 0.0, 0.0, 30.0, 15.0, 15.0, 15.0).is_frontal()
-            False
         """
-        return (
-            abs(self.yaw) <= self.yaw_threshold
-            and abs(self.pitch) <= self.pitch_threshold
-            and abs(self.roll) <= self.roll_threshold
-        )
+        return self.is_pose_ok() and self.is_in_region(region)
 
     def to_metadata(self) -> dict[str, Any]:
-        """Serialize metrics for the public metadata contract.
+        """Serialize metrics, limits, and geometry for the metadata contract.
 
         Returns:
-            A JSON-ready mapping with rounded angles and thresholds.
+            JSON-ready mapping used under ``metadata.frontal``.
 
         Example:
-            >>> m = FrontalMetrics("solvepnp", 5.123, -2.0, 0.5, 15.0, 12.0, 10.0)
-            >>> m.to_metadata()["yaw"]
-            5.12
-            >>> m.to_metadata()["roll_threshold"]
-            10.0
+            >>> limits = PoseLimits(15, 15, 15, 15, 15)
+            >>> box = FaceBox(0.5, 0.5, 0.2, 0.3)
+            >>> m = FrontalMetrics("solvepnp", 1.0, 2.0, 3.0, limits, box)
+            >>> sorted(m.to_metadata())
+            ['box', 'limits', 'method', 'pitch', 'roll', 'yaw']
         """
         return {
             "method": self.method,
             "yaw": round(self.yaw, 2),
             "pitch": round(self.pitch, 2),
             "roll": round(self.roll, 2),
-            "yaw_threshold": self.yaw_threshold,
-            "pitch_threshold": self.pitch_threshold,
-            "roll_threshold": self.roll_threshold,
+            "limits": self.limits.to_metadata(),
+            "box": self.box.to_metadata(),
         }
 
 
@@ -89,10 +336,9 @@ class GenerationConfig:
         count: Number of successfully saved faces to produce.
         save_metadata: Write aggregate/per-face metadata and stats files.
         remove_bg: Apply background removal (transparent output).
-        frontal_only: Reject images that fail the frontal filter.
-        yaw_threshold: Absolute yaw (turn) limit in degrees when filtering.
-        pitch_threshold: Absolute pitch (up/down gaze) limit in degrees when filtering.
-        roll_threshold: Absolute roll (in-plane tilt) limit in degrees when filtering.
+        frontal_only: Enforce pose (and configured region) filtering.
+        pose_limits: Per-direction rotation limits in degrees.
+        face_region: Acceptable face-center region (normalized).
         classify_gender: Run gender classification when available.
         require_gender: Fail the run if gender classification is unavailable
             while ``classify_gender`` is enabled.
@@ -109,9 +355,8 @@ class GenerationConfig:
     save_metadata: bool = True
     remove_bg: bool = False
     frontal_only: bool = False
-    yaw_threshold: float = 15.0
-    pitch_threshold: float = 15.0
-    roll_threshold: float = 15.0
+    pose_limits: PoseLimits = field(default_factory=PoseLimits)
+    face_region: FaceRegion = field(default_factory=FaceRegion)
     classify_gender: bool = True
     require_gender: bool = False
     grayscale: bool = True
@@ -125,8 +370,6 @@ class GenerationConfig:
             raise ValueError("count must be >= 1")
         if self.max_attempts_factor < 1:
             raise ValueError("max_attempts_factor must be >= 1")
-        if self.yaw_threshold < 0 or self.pitch_threshold < 0 or self.roll_threshold < 0:
-            raise ValueError("pose thresholds must be >= 0")
         low, high = self.request_sleep_s
         if low < 0 or high < low:
             raise ValueError("request_sleep_s must satisfy 0 <= low <= high")
@@ -138,6 +381,16 @@ class GenerationConfig:
     def max_attempts(self) -> int:
         """Upper bound on source fetch attempts for this run."""
         return max(self.count * self.max_attempts_factor, self.count)
+
+    @property
+    def requires_landmark_filter(self) -> bool:
+        """True when the run needs dlib pose/geometry evaluation.
+
+        Position-only restrictions also require detection, so they imply
+        the landmark filter when combined with ``frontal_only``, or when a
+        non-default region is set with ``frontal_only``.
+        """
+        return self.frontal_only
 
 
 @dataclass(frozen=True)
@@ -195,7 +448,7 @@ class GenerationStats:
         produced: Images successfully written.
         attempts: Source fetch attempts made.
         failed_fetches: Fetches that returned no usable image.
-        filtered_out: Images rejected by the frontal filter.
+        filtered_out: Images rejected by the pose/region filter.
         gender_male: Count of male-labeled outputs.
         gender_female: Count of female-labeled outputs.
         gender_unknown: Count of unknown-labeled outputs.
@@ -260,6 +513,7 @@ class GenerationResult:
             List of schema-stable mappings.
 
         Example:
+            >>> from pathlib import Path
             >>> from face_faker.domain.entities import GenerationStats
             >>> stats = GenerationStats(1, 0, 0, 0, 0, 0, 0, 0, 0.0)
             >>> GenerationResult((), stats, Path("out")).to_metadata_list()
@@ -294,6 +548,8 @@ def records_to_csv_rows(records: Sequence[ImageRecord]) -> list[dict[str, Any]]:
             row["yaw"] = record.frontal.yaw
             row["pitch"] = record.frontal.pitch
             row["roll"] = record.frontal.roll
+            row["center_x"] = record.frontal.box.center_x
+            row["center_y"] = record.frontal.box.center_y
         rows.append(row)
     return rows
 
