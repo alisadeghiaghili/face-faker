@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 from face_faker.domain.errors import MissingModelError
@@ -14,6 +13,7 @@ from face_faker.infrastructure.vision.dlib_frontal import (
 
 def test_identity_rotation_is_zero_angles() -> None:
     cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
     yaw, pitch, roll = rotation_vector_to_euler_degrees(
         np.zeros(3, dtype=np.float64), cv2, np
     )
@@ -34,15 +34,13 @@ def test_filter_holds_thresholds_and_path(tmp_path) -> None:
 
 
 def test_evaluate_raises_missing_model(tmp_path) -> None:
-    filt = DlibSolvePnPFrontalFilter(models_dir=tmp_path / "empty")
+    pytest.importorskip("cv2")
+    pytest.importorskip("dlib")
+    pytest.importorskip("numpy")
+
     from PIL import Image
 
+    filt = DlibSolvePnPFrontalFilter(models_dir=tmp_path / "empty")
     image = Image.new("RGB", (32, 32), "gray")
-    try:
-        import cv2  # noqa: F401
-        import dlib  # noqa: F401
-    except ImportError:
-        pytest.skip("cv2/dlib not installed in this environment")
-
     with pytest.raises(MissingModelError):
         filt.evaluate(image)

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-
 from face_faker.domain.enums import GenderLabel
 from face_faker.domain.errors import DependencyError
 from face_faker.logging_config import get_logger
@@ -43,10 +41,11 @@ class DeepFaceGenderClassifier:
             DependencyError: If DeepFace is not installed.
         """
         try:
+            import numpy as np
             from deepface import DeepFace
         except ImportError as exc:  # pragma: no cover - environment dependent
             raise DependencyError(
-                "Gender classification requires deepface. "
+                "Gender classification requires deepface and numpy. "
                 "Install with: pip install 'face-faker[gender]'"
             ) from exc
 

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
-
-import numpy as np
+from typing import Any
 
 from face_faker.config import landmark_model_path
 from face_faker.domain.entities import FrontalMetrics
@@ -15,16 +13,14 @@ from face_faker.logging_config import get_logger
 logger = get_logger("vision.dlib_frontal")
 
 # Canonical 3D face points (millimetres) for the six solvePnP correspondences.
-_MODEL_POINTS_3D = np.array(
-    [
-        (0.0, 0.0, 0.0),  # Nose tip  -> landmark 30
-        (0.0, -330.0, -65.0),  # Chin      -> landmark 8
-        (-225.0, 170.0, -135.0),  # Left eye  -> landmark 36
-        (225.0, 170.0, -135.0),  # Right eye -> landmark 45
-        (-150.0, -150.0, -125.0),  # Left mouth-> landmark 48
-        (150.0, -150.0, -125.0),  # Right mouth-> landmark 54
-    ],
-    dtype=np.float64,
+# Kept as plain tuples so importing this module does not require numpy.
+_MODEL_POINTS_3D_SPEC = (
+    (0.0, 0.0, 0.0),  # Nose tip  -> landmark 30
+    (0.0, -330.0, -65.0),  # Chin      -> landmark 8
+    (-225.0, 170.0, -135.0),  # Left eye  -> landmark 36
+    (225.0, 170.0, -135.0),  # Right eye -> landmark 45
+    (-150.0, -150.0, -125.0),  # Left mouth-> landmark 48
+    (150.0, -150.0, -125.0),  # Right mouth-> landmark 54
 )
 
 _LANDMARK_INDICES = (30, 8, 36, 45, 48, 54)
@@ -37,14 +33,15 @@ def _require_cv_deps() -> tuple[Any, Any, Any]:
         Tuple of ``(cv2, dlib, np)`` modules.
 
     Raises:
-        DependencyError: If opencv-python or dlib is not installed.
+        DependencyError: If opencv-python, dlib, or numpy is not installed.
     """
     try:
         import cv2
         import dlib
+        import numpy as np
     except ImportError as exc:  # pragma: no cover - environment dependent
         raise DependencyError(
-            "Frontal filtering requires opencv-python and dlib. "
+            "Frontal filtering requires opencv-python, dlib, and numpy. "
             "Install with: pip install 'face-faker[frontal]'"
         ) from exc
     return cv2, dlib, np
@@ -194,7 +191,7 @@ class DlibSolvePnPFrontalFilter:
         dist_coeffs = np.zeros((4, 1), dtype=np.float64)
 
         ok, rotation_vector, _translation = cv2.solvePnP(
-            _MODEL_POINTS_3D,
+            np.array(_MODEL_POINTS_3D_SPEC, dtype=np.float64),
             image_points,
             camera_matrix,
             dist_coeffs,
