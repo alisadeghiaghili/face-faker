@@ -88,6 +88,27 @@ result = generate_faces(
 )
 ```
 
+## Sources
+
+| Source | How to enable |
+|--------|----------------|
+| TPNDE (default) | leave `source_dir` unset; retries via `source_retries` / `source_backoff_s` |
+| Local folder | `source_dir=...` or `--source-dir` (cycles images; optional `--source-shuffle`) |
+
+```python
+result = generate_faces(
+    "out/from_local",
+    count=30,
+    source_dir="datasets/faces",
+    source_shuffle=True,
+    classify_gender=False,
+)
+```
+
+```bash
+face-faker generate --count 30 --source-dir ./datasets/faces --source-shuffle
+```
+
 ## CLI
 
 ```bash
@@ -99,6 +120,7 @@ face-faker generate --count 50 --frontal-only \
   --face-x-min 0.3 --face-x-max 0.7 \
   --face-y-min 0.2 --face-y-max 0.8
 face-faker generate --count 10 --remove-bg --color
+face-faker generate --count 30 --source-dir ./inbox --source-shuffle
 face-faker info
 python -m face_faker --version
 ```

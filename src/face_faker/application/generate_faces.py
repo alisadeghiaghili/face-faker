@@ -38,6 +38,31 @@ logger = get_logger("application.generate")
 ProgressCallback = Callable[[int, int], None]
 
 
+def _build_default_source(config: GenerationConfig) -> FaceSource:
+    """Construct the default face source from ``config``.
+
+    When ``config.source_dir`` is set, reads a local image folder; otherwise
+    uses TPNDE with configured retries/backoff.
+
+    Args:
+        config: Generation settings.
+
+    Returns:
+        A concrete :class:`FaceSource` adapter.
+    """
+    if config.source_dir is not None:
+        from face_faker.infrastructure.sources.local_dir import LocalDirectorySource
+
+        return LocalDirectorySource(config.source_dir, shuffle=config.source_shuffle)
+
+    from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource
+
+    return ThisPersonDoesNotExistSource(
+        retries=config.source_retries,
+        backoff_s=config.source_backoff_s,
+    )
+
+
 def _to_rgb(image: Any) -> Image.Image:
     """Coerce a source payload into an RGB PIL image.
 
@@ -126,9 +151,7 @@ def generate_faces(
         2
     """
     if source is None:
-        from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource
-
-        source = ThisPersonDoesNotExistSource()
+        source = _build_default_source(config)
 
     if frontal_filter is None and config.frontal_only:
         from face_faker.infrastructure.vision.dlib_frontal import DlibSolvePnPFrontalFilter

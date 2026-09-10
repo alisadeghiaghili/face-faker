@@ -116,6 +116,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max face-center Y in [0,1] — bottom bound (default: 1)",
     )
     gen.add_argument(
+        "--source-dir",
+        default=None,
+        help="Read faces from a local image directory instead of TPNDE",
+    )
+    gen.add_argument(
+        "--source-retries",
+        type=int,
+        default=2,
+        help="Extra TPNDE attempts after failure (default: 2)",
+    )
+    gen.add_argument(
+        "--source-backoff",
+        type=float,
+        default=0.25,
+        help="Base seconds between TPNDE retries (default: 0.25)",
+    )
+    gen.add_argument(
+        "--source-shuffle",
+        action="store_true",
+        help="Shuffle --source-dir listing once at start",
+    )
+    gen.add_argument(
         "--no-gender",
         action="store_true",
         help="Skip gender classification",
@@ -183,6 +205,10 @@ def cmd_generate(args: argparse.Namespace) -> int:
         grayscale=not args.color,
         models_dir=args.models_dir,
         strict_completion=args.strict,
+        source_dir=args.source_dir,
+        source_retries=args.source_retries,
+        source_backoff_s=args.source_backoff,
+        source_shuffle=args.source_shuffle,
     )
 
     try:
