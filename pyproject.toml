@@ -5,24 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "face-faker"
 dynamic = ["version"]
-description = "AI-powered face image generator for creating fake identities"
+description = "Synthetic face dataset toolkit for computer-vision testing and research"
 readme = "README.md"
 license = {text = "Proprietary"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
-    {name = "Ali Sadeghi", email = "ali.sadeghi@example.com"}
+    {name = "Ali Sadeghi Aghili", email = "alisadeghiaghili@gmail.com"}
+]
+keywords = [
+    "synthetic-data",
+    "computer-vision",
+    "face",
+    "dataset",
+    "testing",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Processing",
 ]
 dependencies = [
     "Pillow>=9.0",
@@ -31,12 +38,24 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-full = [
-    "deepface>=0.0.79",
+frontal = [
     "opencv-python>=4.6",
     "numpy>=1.23",
-    "rembg>=2.0.50",
     "dlib>=19.24",
+]
+gender = [
+    "deepface>=0.0.79",
+    "numpy>=1.23",
+]
+bg = [
+    "rembg>=2.0.50",
+]
+full = [
+    "opencv-python>=4.6",
+    "numpy>=1.23",
+    "dlib>=19.24",
+    "deepface>=0.0.79",
+    "rembg>=2.0.50",
 ]
 dev = [
     "pytest>=7.0",
@@ -44,11 +63,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/alisadeghi/face-faker"
-Repository = "https://github.com/alisadeghi/face-faker"
+Homepage = "https://github.com/alisadeghiaghili/face-faker"
+Repository = "https://github.com/alisadeghiaghili/face-faker"
+Issues = "https://github.com/alisadeghiaghili/face-faker/issues"
 
 [project.scripts]
-face-faker = "face_faker.cli:main"
+face-faker = "face_faker.interfaces.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -58,3 +78,21 @@ version = {attr = "face_faker._version.__version__"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = [
+    "network: tests that hit the network (deselected by default in CI)",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["face_faker"]
+mypy_path = "src"

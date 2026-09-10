@@ -1,20 +1,26 @@
 # Face Faker
 
-**AI-powered face image generator for creating fake identities**
+**Synthetic face dataset toolkit for computer-vision testing and research.**
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-Generate realistic AI-generated face images with gender detection, background removal, and frontal face filtering.
+Generate labeled synthetic face images for smoke-testing face pipelines, QA,
+and research datasets. Not intended for identity fraud, impersonation, or
+circumventing identity verification systems.
 
-## Features
+## What changed in v3
 
-- **AI-generated faces** - Fetch realistic faces from thispersondoesnotexist.com
-- **Gender detection** - Automatic male/female classification using DeepFace
-- **Background removal** - Transparent PNG output with rembg
-- **Frontal face filtering** - dlib landmark-based pose detection
-- **Batch processing** - Generate thousands of face images
-- **Metadata export** - JSON and CSV metadata for each generated face
+v3 is a **breaking correctness release**:
+
+- Head-pose filtering uses **solvePnP** with real `yaw` / `pitch` / `roll` (degrees).
+- Gender labels are normalized to `male` / `female` / `unknown`.
+- `remove_bg` default is **`False`** in both API and CLI.
+- Metadata schema is versioned (`schema_version: "1"`).
+- Model paths resolve via `FACE_FAKER_MODELS_DIR` (install-safe).
+- Typed errors, structured logging, and injectable adapters for tests.
+
+See [docs/MIGRATION_v3.md](docs/MIGRATION_v3.md).
 
 ## Installation
 
@@ -22,125 +28,147 @@ Generate realistic AI-generated face images with gender detection, background re
 pip install face-faker
 ```
 
-For full features (gender detection, background removal, frontal filtering):
-```bash
-pip install face-faker[full]
-```
-
-## Quick Start
-
-### Generate Face Images
-```python
-from face_faker import generate_id_faces
-
-# Generate 100 face images
-metadata = generate_id_faces(
-    output_dir="output/faces",
-    num_images=100
-)
-
-print(f"Generated {len(metadata)} faces")
-```
-
-### Generate with Background Removal
-```python
-from face_faker import generate_id_faces
-
-# Generate faces with transparent background
-metadata = generate_id_faces(
-    output_dir="output/faces",
-    num_images=50,
-    remove_bg=True
-)
-```
-
-### Generate Frontal Faces Only
-```python
-from face_faker import generate_id_faces
-
-# Only save faces within 15 degrees of frontal
-metadata = generate_id_faces(
-    output_dir="output/frontal_faces",
-    num_images=200,
-    frontal_only=True,
-    frontal_threshold=15
-)
-```
-
-## CLI Commands
+Optional extras:
 
 ```bash
-# Generate 100 face images
-face-faker generate --count 100 --output-dir ./faces
-
-# Generate with background removal
-face-faker generate --count 50 --remove-bg --output-dir ./transparent
-
-# Generate frontal faces only
-face-faker generate --count 200 --frontal-only --threshold 15
-
-# Show information
-face-faker info
+pip install 'face-faker[frontal]'   # dlib + OpenCV head pose
+pip install 'face-faker[gender]'    # DeepFace gender labels
+pip install 'face-faker[bg]'        # rembg background removal
+pip install 'face-faker[full]'      # everything
 ```
 
-## API Reference
-
-### `generate_id_faces()`
-
-```python
-generate_id_faces(
-    output_dir="id_faces",      # Output directory
-    num_images=100,             # Number of images to generate
-    save_metadata=True,         # Save JSON/CSV metadata
-    remove_bg=True,             # Remove background (transparent PNG)
-    frontal_only=False,         # Only save frontal faces
-    frontal_threshold=15,       # Frontal threshold in degrees
-) -> List[Dict]                 # Returns list of metadata entries
-```
-
-### Metadata Format
-
-Each generated face includes metadata:
-
-```json
-{
-    "filename": "face_0001.png",
-    "gender": "Male",
-    "index": 1,
-    "background_removed": true,
-    "frontal_filtered": false
-}
-```
-
-## Requirements
-
-### Core
-- Python 3.8+
-- Pillow
-- requests
-- tqdm
-
-### Full Features (optional)
-- deepface - Gender detection
-- opencv-python - Image processing
-- numpy - Array operations
-- rembg - Background removal
-- dlib - Frontal face detection
-
-## Models
-
-For frontal face filtering, download the dlib shape predictor:
+### Landmark model (frontal filter only)
 
 ```bash
 wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 bunzip2 shape_predictor_68_face_landmarks.dat.bz2
-mv shape_predictor_68_face_landmarks.dat models/
+export FACE_FAKER_MODELS_DIR="$PWD/models"
+mkdir -p "$FACE_FAKER_MODELS_DIR"
+mv shape_predictor_68_face_landmarks.dat "$FACE_FAKER_MODELS_DIR/"
 ```
+
+## Quick start (Python)
+
+```python
+from face_faker import GenerationConfig, generate_faces
+
+result = generate_faces(
+    output_dir="out/faces",
+    count=20,
+    remove_bg=False,
+    frontal_only=False,
+    classify_gender=True,
+)
+
+print(result.stats.produced, result.stats.gender_female)
+print(result.records[0].to_metadata())
+```
+
+Frontal-only with explicit pose thresholds:
+
+```python
+from face_faker import generate_faces
+
+result = generate_faces(
+    "out/frontal",
+    count=50,
+    frontal_only=True,
+    yaw_threshold=12.0,
+    pitch_threshold=15.0,
+    strict_completion=True,
+)
+```
+
+## CLI
+
+```bash
+face-faker generate --count 20 --output-dir ./faces
+face-faker generate --count 50 --frontal-only --yaw-threshold 12 --pitch-threshold 15
+face-faker generate --count 10 --remove-bg --color
+face-faker info
+python -m face_faker --version
+```
+
+Exit codes:
+
+| Code | Meaning |
+|-----:|---------|
+| 0 | Success |
+| 1 | Usage error |
+| 2 | Missing model file |
+| 3 | Missing optional dependency |
+| 4 | Source unavailable (zero images) |
+| 5 | Incomplete batch (`--strict`) |
+| 10 | Unexpected error |
+
+## Outputs
+
+```
+out/faces/
+  face_0001.png
+  face_0002.png
+  metadata.json      # per-face schema v1
+  stats.json         # aggregate counters
+  faces.csv          # tabular summary
+```
+
+### Metadata record (schema v1)
+
+```json
+{
+  "schema_version": "1",
+  "filename": "face_0001.png",
+  "index": 1,
+  "gender": "female",
+  "background_removed": false,
+  "frontal_filtered": true,
+  "frontal": {
+    "method": "solvepnp",
+    "yaw": 3.21,
+    "pitch": -1.05,
+    "roll": 0.4,
+    "yaw_threshold": 15.0,
+    "pitch_threshold": 15.0
+  }
+}
+```
+
+## Defaults (single source of truth)
+
+| Setting | Default |
+|---------|---------|
+| `count` | 100 |
+| `remove_bg` | `false` |
+| `frontal_only` | `false` |
+| `yaw_threshold` | `15.0` degrees |
+| `pitch_threshold` | `15.0` degrees |
+| `classify_gender` | `true` |
+| `grayscale` | `true` |
+| `save_metadata` | `true` |
+| `max_attempts_factor` | `3` |
+
+## Intended use
+
+- Unit/integration fixtures for face detection and attribute models
+- Synthetic augmentation experiments
+- QA smoke datasets
+
+**Out of scope:** forging identity documents, bypassing KYC/biometric checks,
+or creating content intended to impersonate a real person.
+
+## Development
+
+```bash
+pip install -e '.[dev]'
+pytest
+```
+
+Architecture notes: [docs/DESIGN.md](docs/DESIGN.md).
 
 ## License
 
-Proprietary License - See [LICENSE](LICENSE) for details.
+Proprietary — see [LICENSE](LICENSE).
 
 ## Author
 
-Ali Sadeghi
+Ali Sadeghi Aghili

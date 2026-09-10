@@ -1,13 +1,23 @@
 PROPRIETARY SOFTWARE LICENSE
 
-Copyright (c) 2026 Ali Sadeghi. All rights reserved.
+Copyright (c) 2026 Ali Sadeghi Aghili. All rights reserved.
 
-This software and associated files (the "Software") are owned by Ali Sadeghi
-and are protected by copyright law and international treaties.
+This software and associated documentation files (the "Software") are the
+proprietary work of Ali Sadeghi Aghili and are protected by copyright law
+and international treaties.
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
+Permission is granted to use the Software for internal evaluation and
+non-commercial research, provided that this notice is retained.
+
+Unless a separate written commercial license is granted by the copyright
+holder, you may not:
+
+- redistribute, sell, sublicense, or publish the Software;
+- reverse engineer, decompile, or disassemble the Software;
+- remove or alter proprietary notices;
+- use the Software to train foundation models without explicit permission;
+- use the Software to create content intended to impersonate real persons
+  or to circumvent identity verification systems.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -16,9 +26,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-RESTRICTIONS:
-- You may not reverse engineer, decompile, or disassemble the Software
-- You may not redistribute, sell, or sublicense the Software
-- You may not use the Software to train AI models without explicit permission
-- You may not remove or alter any proprietary notices on the Software
