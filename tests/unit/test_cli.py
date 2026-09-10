@@ -15,6 +15,7 @@ def test_parser_defaults_remove_bg_off() -> None:
     assert args.remove_bg is False
     assert args.yaw_threshold == 15.0
     assert args.pitch_threshold == 15.0
+    assert args.roll_threshold == 15.0
 
 
 def test_info_exits_zero(capsys) -> None:

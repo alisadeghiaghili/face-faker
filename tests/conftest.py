@@ -93,15 +93,23 @@ def make_image_bytes(image: Image.Image | None = None) -> bytes:
     return buffer.getvalue()
 
 
-def frontal(yaw: float = 0.0, pitch: float = 0.0, threshold: float = 15.0) -> FrontalMetrics:
-    """Build frontal metrics with the given angles."""
+def frontal(
+    yaw: float = 0.0,
+    pitch: float = 0.0,
+    roll: float = 0.0,
+    threshold: float = 15.0,
+    roll_threshold: float | None = None,
+) -> FrontalMetrics:
+    """Build frontal metrics with the given angles and thresholds."""
+    rt = threshold if roll_threshold is None else roll_threshold
     return FrontalMetrics(
         method="solvepnp",
         yaw=yaw,
         pitch=pitch,
-        roll=0.0,
+        roll=roll,
         yaw_threshold=threshold,
         pitch_threshold=threshold,
+        roll_threshold=rt,
     )
 
 

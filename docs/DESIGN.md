@@ -26,20 +26,24 @@ interfaces (CLI / public API)
             ← infrastructure (tpnd, dlib solvePnP, deepface, rembg, local fs)
 ```
 
-## Frontal filter (v3.0)
+## Frontal filter (v3.0+)
 
 dlib 68 landmarks → six 2D points → OpenCV `solvePnP` → euler `(yaw, pitch, roll)` degrees.
 
-Accept when `|yaw| <= yaw_threshold` and `|pitch| <= pitch_threshold`.
+Accept when all of the following hold:
 
-## Gender
-
-Classifier raw strings (`Man`, `Woman`, …) normalize to `GenderLabel`.
+- `|yaw| <= yaw_threshold` (left/right turn)
+- `|pitch| <= pitch_threshold` (up/down gaze)
+- `|roll| <= roll_threshold` (in-plane head tilt)
 
 ## Versioning
 
 - v3.0.0 — breaking correctness release (pose units, gender labels, remove_bg default, schema).
-- Subsequent minors add adapters/CI without breaking the metadata schema.
+- v3.1.0 — roll/tilt threshold participates in frontal acceptance.
+
+## Gender
+
+Classifier raw strings (`Man`, `Woman`, …) normalize to `GenderLabel`.
 
 ## Out of scope
 

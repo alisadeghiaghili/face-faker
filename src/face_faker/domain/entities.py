@@ -13,13 +13,20 @@ from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 class FrontalMetrics:
     """Head-pose metrics produced by a :class:`FrontalFilter`.
 
+    Angle semantics (degrees):
+
+    - ``yaw``: left/right head turn
+    - ``pitch``: up/down gaze (nod)
+    - ``roll``: in-plane tilt (ear-to-shoulder)
+
     Attributes:
         method: Algorithm identifier (``"solvepnp"`` for the v3 filter).
         yaw: Yaw angle in degrees (positive = subject's left / image right).
-        pitch: Pitch angle in degrees.
-        roll: Roll angle in degrees.
+        pitch: Pitch angle in degrees (positive = typically looking up).
+        roll: Roll/tilt angle in degrees (positive = clockwise in image).
         yaw_threshold: Absolute yaw acceptance threshold in degrees.
         pitch_threshold: Absolute pitch acceptance threshold in degrees.
+        roll_threshold: Absolute roll/tilt acceptance threshold in degrees.
     """
 
     method: str
@@ -28,21 +35,26 @@ class FrontalMetrics:
     roll: float
     yaw_threshold: float
     pitch_threshold: float
+    roll_threshold: float = 15.0
 
     def is_frontal(self) -> bool:
-        """Return ``True`` when yaw and pitch are within thresholds.
+        """Return ``True`` when yaw, pitch, and roll are within thresholds.
 
         Returns:
             Whether the pose is considered frontal under stored thresholds.
 
         Example:
-            >>> m = FrontalMetrics("solvepnp", 5.0, -3.0, 1.0, 15.0, 15.0)
+            >>> m = FrontalMetrics("solvepnp", 5.0, -3.0, 1.0, 15.0, 15.0, 15.0)
             >>> m.is_frontal()
             True
-            >>> FrontalMetrics("solvepnp", 20.0, 0.0, 0.0, 15.0, 15.0).is_frontal()
+            >>> FrontalMetrics("solvepnp", 0.0, 0.0, 30.0, 15.0, 15.0, 15.0).is_frontal()
             False
         """
-        return abs(self.yaw) <= self.yaw_threshold and abs(self.pitch) <= self.pitch_threshold
+        return (
+            abs(self.yaw) <= self.yaw_threshold
+            and abs(self.pitch) <= self.pitch_threshold
+            and abs(self.roll) <= self.roll_threshold
+        )
 
     def to_metadata(self) -> dict[str, Any]:
         """Serialize metrics for the public metadata contract.
@@ -51,9 +63,11 @@ class FrontalMetrics:
             A JSON-ready mapping with rounded angles and thresholds.
 
         Example:
-            >>> m = FrontalMetrics("solvepnp", 5.123, -2.0, 0.5, 15.0, 12.0)
+            >>> m = FrontalMetrics("solvepnp", 5.123, -2.0, 0.5, 15.0, 12.0, 10.0)
             >>> m.to_metadata()["yaw"]
             5.12
+            >>> m.to_metadata()["roll_threshold"]
+            10.0
         """
         return {
             "method": self.method,
@@ -62,6 +76,7 @@ class FrontalMetrics:
             "roll": round(self.roll, 2),
             "yaw_threshold": self.yaw_threshold,
             "pitch_threshold": self.pitch_threshold,
+            "roll_threshold": self.roll_threshold,
         }
 
 
@@ -75,8 +90,9 @@ class GenerationConfig:
         save_metadata: Write aggregate/per-face metadata and stats files.
         remove_bg: Apply background removal (transparent output).
         frontal_only: Reject images that fail the frontal filter.
-        yaw_threshold: Absolute yaw limit in degrees when filtering.
-        pitch_threshold: Absolute pitch limit in degrees when filtering.
+        yaw_threshold: Absolute yaw (turn) limit in degrees when filtering.
+        pitch_threshold: Absolute pitch (up/down gaze) limit in degrees when filtering.
+        roll_threshold: Absolute roll (in-plane tilt) limit in degrees when filtering.
         classify_gender: Run gender classification when available.
         require_gender: Fail the run if gender classification is unavailable
             while ``classify_gender`` is enabled.
@@ -95,6 +111,7 @@ class GenerationConfig:
     frontal_only: bool = False
     yaw_threshold: float = 15.0
     pitch_threshold: float = 15.0
+    roll_threshold: float = 15.0
     classify_gender: bool = True
     require_gender: bool = False
     grayscale: bool = True
@@ -108,7 +125,7 @@ class GenerationConfig:
             raise ValueError("count must be >= 1")
         if self.max_attempts_factor < 1:
             raise ValueError("max_attempts_factor must be >= 1")
-        if self.yaw_threshold < 0 or self.pitch_threshold < 0:
+        if self.yaw_threshold < 0 or self.pitch_threshold < 0 or self.roll_threshold < 0:
             raise ValueError("pose thresholds must be >= 0")
         low, high = self.request_sleep_s
         if low < 0 or high < low:

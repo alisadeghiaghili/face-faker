@@ -73,8 +73,9 @@ result = generate_faces(
     "out/frontal",
     count=50,
     frontal_only=True,
-    yaw_threshold=12.0,
-    pitch_threshold=15.0,
+    yaw_threshold=12.0,    # left/right turn
+    pitch_threshold=15.0,  # up/down gaze
+    roll_threshold=10.0,   # in-plane head tilt
     strict_completion=True,
 )
 ```
@@ -83,7 +84,8 @@ result = generate_faces(
 
 ```bash
 face-faker generate --count 20 --output-dir ./faces
-face-faker generate --count 50 --frontal-only --yaw-threshold 12 --pitch-threshold 15
+face-faker generate --count 50 --frontal-only \
+  --yaw-threshold 12 --pitch-threshold 15 --roll-threshold 10
 face-faker generate --count 10 --remove-bg --color
 face-faker info
 python -m face_faker --version
@@ -128,7 +130,8 @@ out/faces/
     "pitch": -1.05,
     "roll": 0.4,
     "yaw_threshold": 15.0,
-    "pitch_threshold": 15.0
+    "pitch_threshold": 15.0,
+    "roll_threshold": 15.0
   }
 }
 ```
@@ -140,8 +143,9 @@ out/faces/
 | `count` | 100 |
 | `remove_bg` | `false` |
 | `frontal_only` | `false` |
-| `yaw_threshold` | `15.0` degrees |
-| `pitch_threshold` | `15.0` degrees |
+| `yaw_threshold` | `15.0` degrees (turn) |
+| `pitch_threshold` | `15.0` degrees (up/down gaze) |
+| `roll_threshold` | `15.0` degrees (head tilt) |
 | `classify_gender` | `true` |
 | `grayscale` | `true` |
 | `save_metadata` | `true` |

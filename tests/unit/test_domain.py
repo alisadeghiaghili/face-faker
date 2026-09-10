@@ -41,19 +41,27 @@ class TestFrontalMetrics:
     """solvePnP metrics semantics."""
 
     def test_is_frontal_within_thresholds(self) -> None:
-        metrics = FrontalMetrics("solvepnp", 5.0, -3.0, 1.0, 15.0, 15.0)
+        metrics = FrontalMetrics("solvepnp", 5.0, -3.0, 1.0, 15.0, 15.0, 15.0)
         assert metrics.is_frontal() is True
 
     def test_rejects_excessive_yaw(self) -> None:
-        metrics = FrontalMetrics("solvepnp", 20.0, 0.0, 0.0, 15.0, 15.0)
+        metrics = FrontalMetrics("solvepnp", 20.0, 0.0, 0.0, 15.0, 15.0, 15.0)
         assert metrics.is_frontal() is False
 
     def test_rejects_excessive_pitch(self) -> None:
-        metrics = FrontalMetrics("solvepnp", 0.0, 18.0, 0.0, 15.0, 15.0)
+        metrics = FrontalMetrics("solvepnp", 0.0, 18.0, 0.0, 15.0, 15.0, 15.0)
+        assert metrics.is_frontal() is False
+
+    def test_rejects_excessive_roll_tilt(self) -> None:
+        metrics = FrontalMetrics("solvepnp", 0.0, 0.0, 30.0, 15.0, 15.0, 15.0)
+        assert metrics.is_frontal() is False
+
+    def test_roll_threshold_can_differ_from_shared_default(self) -> None:
+        metrics = FrontalMetrics("solvepnp", 0.0, 0.0, 12.0, 15.0, 15.0, 10.0)
         assert metrics.is_frontal() is False
 
     def test_metadata_uses_pose_names_not_ears(self) -> None:
-        metrics = FrontalMetrics("solvepnp", 5.123, -2.0, 0.5, 15.0, 12.0)
+        metrics = FrontalMetrics("solvepnp", 5.123, -2.0, 0.5, 15.0, 12.0, 10.0)
         payload = metrics.to_metadata()
         assert set(payload) == {
             "method",
@@ -62,8 +70,10 @@ class TestFrontalMetrics:
             "roll",
             "yaw_threshold",
             "pitch_threshold",
+            "roll_threshold",
         }
         assert payload["yaw"] == 5.12
+        assert payload["roll_threshold"] == 10.0
         assert payload["method"] == "solvepnp"
 
 

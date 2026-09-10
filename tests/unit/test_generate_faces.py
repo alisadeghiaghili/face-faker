@@ -116,9 +116,38 @@ def test_frontal_metadata_not_labeled_ears(tmp_path, sleep_noop) -> None:
         sleep_fn=sleep_noop,
     )
     frontal_meta = result.records[0].to_metadata()["frontal"]
-    assert set(frontal_meta) >= {"yaw", "pitch", "roll", "method"}
+    assert set(frontal_meta) >= {
+        "yaw",
+        "pitch",
+        "roll",
+        "method",
+        "yaw_threshold",
+        "pitch_threshold",
+        "roll_threshold",
+    }
     assert "left_ear" not in frontal_meta
     assert "ear_asymmetry" not in frontal_meta
+
+
+def test_frontal_filter_rejects_excessive_roll_tilt(tmp_path, sleep_noop) -> None:
+    images = [make_image("red"), make_image("green")]
+    filt = FakeFrontalFilter(
+        [
+            frontal(yaw=0.0, pitch=0.0, roll=40.0),
+            frontal(yaw=0.0, pitch=0.0, roll=2.0),
+        ]
+    )
+    result = generate_faces(
+        _config(tmp_path, count=1, frontal_only=True),
+        source=FakeSource(images),
+        frontal_filter=filt,
+        gender_classifier=FakeGenderClassifier(),
+        store=FakeStore(),
+        sleep_fn=sleep_noop,
+    )
+    assert result.stats.filtered_out == 1
+    assert result.records[0].frontal is not None
+    assert result.records[0].frontal.roll == 2.0
 
 
 def test_remove_bg_default_false_keeps_rgb(tmp_path, sleep_noop) -> None:

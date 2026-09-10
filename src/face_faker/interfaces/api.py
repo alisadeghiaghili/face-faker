@@ -26,6 +26,7 @@ def generate_faces(
     frontal_only: bool = False,
     yaw_threshold: float = 15.0,
     pitch_threshold: float = 15.0,
+    roll_threshold: float = 15.0,
     classify_gender: bool = True,
     require_gender: bool = False,
     grayscale: bool = True,
@@ -46,8 +47,9 @@ def generate_faces(
         save_metadata: Write ``metadata.json``, ``stats.json``, ``faces.csv``.
         remove_bg: Remove background (requires rembg).
         frontal_only: Keep only frontal poses (requires dlib + OpenCV).
-        yaw_threshold: Absolute yaw limit in degrees for frontal filtering.
-        pitch_threshold: Absolute pitch limit in degrees for frontal filtering.
+        yaw_threshold: Absolute yaw (left/right turn) limit in degrees.
+        pitch_threshold: Absolute pitch (up/down gaze) limit in degrees.
+        roll_threshold: Absolute roll (in-plane head tilt) limit in degrees.
         classify_gender: Run gender classification (requires deepface).
         require_gender: Fail if gender classification is unavailable.
         grayscale: Convert outputs to grayscale (preserves alpha).
@@ -83,6 +85,7 @@ def generate_faces(
             frontal_only=frontal_only,
             yaw_threshold=yaw_threshold,
             pitch_threshold=pitch_threshold,
+            roll_threshold=roll_threshold,
             classify_gender=classify_gender,
             require_gender=require_gender,
             grayscale=grayscale,
