@@ -357,6 +357,8 @@ class GenerationConfig:
         gender_max_share: Optional upper share (0..1] of produced images
             allowed for either ``male`` or ``female``. ``None`` disables
             balancing. Unknown labels are never capped.
+        prefetch_workers: Concurrent source-fetch threads (``1`` = inline).
+        prefetch_buffer: Max in-flight prefetches when workers > 1.
     """
 
     output_dir: Path | str = "id_faces"
@@ -378,6 +380,8 @@ class GenerationConfig:
     source_backoff_s: float = 0.25
     source_shuffle: bool = False
     gender_max_share: float | None = None
+    prefetch_workers: int = 1
+    prefetch_buffer: int = 4
 
     def __post_init__(self) -> None:
         if self.count < 1:
@@ -390,6 +394,10 @@ class GenerationConfig:
             raise ValueError("source_backoff_s must be >= 0")
         if self.gender_max_share is not None and not 0.0 < self.gender_max_share <= 1.0:
             raise ValueError("gender_max_share must be in (0, 1]")
+        if self.prefetch_workers < 1:
+            raise ValueError("prefetch_workers must be >= 1")
+        if self.prefetch_buffer < 1:
+            raise ValueError("prefetch_buffer must be >= 1")
         low, high = self.request_sleep_s
         if low < 0 or high < low:
             raise ValueError("request_sleep_s must satisfy 0 <= low <= high")
