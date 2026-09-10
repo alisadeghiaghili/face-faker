@@ -40,6 +40,11 @@ pip install 'face-faker[full]'      # everything
 ### Landmark model (frontal filter only)
 
 ```bash
+# recommended
+export FACE_FAKER_MODELS_DIR="$PWD/models"
+python scripts/download_landmark_model.py --dest "$FACE_FAKER_MODELS_DIR"
+
+# or manually
 wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 bunzip2 shape_predictor_68_face_landmarks.dat.bz2
 export FACE_FAKER_MODELS_DIR="$PWD/models"
