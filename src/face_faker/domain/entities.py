@@ -570,6 +570,8 @@ def records_to_csv_rows(records: Sequence[ImageRecord]) -> list[dict[str, Any]]:
             "background_removed": record.background_removed,
             "frontal_filtered": record.frontal_filtered,
         }
+        if record.source_ref is not None:
+            row["source_ref"] = record.source_ref
         if record.frontal is not None:
             row["yaw"] = record.frontal.yaw
             row["pitch"] = record.frontal.pitch
