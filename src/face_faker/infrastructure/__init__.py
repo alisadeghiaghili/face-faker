@@ -7,18 +7,23 @@ scientific dependencies (numpy/cv2/dlib/deepface/rembg) at package import time.
 __all__ = [
     "DeepFaceGenderClassifier",
     "DlibSolvePnPFrontalFilter",
+    "LocalDirectorySource",
     "LocalFaceStore",
     "RembgBackgroundRemover",
     "ThisPersonDoesNotExistSource",
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     """Lazily expose adapter classes on attribute access."""
     if name == "ThisPersonDoesNotExistSource":
         from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource
 
         return ThisPersonDoesNotExistSource
+    if name == "LocalDirectorySource":
+        from face_faker.infrastructure.sources.local_dir import LocalDirectorySource
+
+        return LocalDirectorySource
     if name == "LocalFaceStore":
         from face_faker.infrastructure.storage.local_fs import LocalFaceStore
 

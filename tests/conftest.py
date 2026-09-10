@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any, Iterator
-from unittest.mock import MagicMock
+from typing import Any
 
 import pytest
 from PIL import Image

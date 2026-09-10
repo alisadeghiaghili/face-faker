@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PIL import Image
 
 from face_faker.application.generate_faces import generate_faces
 from face_faker.domain.entities import GenerationConfig
@@ -15,7 +14,6 @@ from face_faker.domain.errors import (
     MissingModelError,
     SourceUnavailableError,
 )
-
 from tests.conftest import (
     FakeBackgroundRemover,
     FakeFrontalFilter,
@@ -28,16 +26,16 @@ from tests.conftest import (
 
 
 def _config(tmp_path: Path, **overrides) -> GenerationConfig:
-    base = dict(
-        output_dir=tmp_path / "out",
-        count=2,
-        save_metadata=True,
-        remove_bg=False,
-        frontal_only=False,
-        classify_gender=True,
-        request_sleep_s=(0.0, 0.0),
-        max_attempts_factor=5,
-    )
+    base = {
+        "output_dir": tmp_path / "out",
+        "count": 2,
+        "save_metadata": True,
+        "remove_bg": False,
+        "frontal_only": False,
+        "classify_gender": True,
+        "request_sleep_s": (0.0, 0.0),
+        "max_attempts_factor": 5,
+    }
     base.update(overrides)
     return GenerationConfig(**base)
 
@@ -280,15 +278,14 @@ def test_incomplete_warns_by_default(tmp_path, sleep_noop) -> None:
 
 
 def test_strict_completion_raises(tmp_path, sleep_noop) -> None:
-    with pytest.warns(UserWarning, match="Produced"):
-        with pytest.raises(GenerationIncompleteError):
-            generate_faces(
-                _config(tmp_path, count=5, max_attempts_factor=1, strict_completion=True),
-                source=FakeSource([make_image()]),
-                gender_classifier=FakeGenderClassifier(),
-                store=FakeStore(),
-                sleep_fn=sleep_noop,
-            )
+    with pytest.warns(UserWarning, match="Produced"), pytest.raises(GenerationIncompleteError):
+        generate_faces(
+            _config(tmp_path, count=5, max_attempts_factor=1, strict_completion=True),
+            source=FakeSource([make_image()]),
+            gender_classifier=FakeGenderClassifier(),
+            store=FakeStore(),
+            sleep_fn=sleep_noop,
+        )
 
 
 def test_csv_only_when_save_metadata(tmp_path, sleep_noop) -> None:

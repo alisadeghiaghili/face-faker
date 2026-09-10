@@ -47,6 +47,10 @@ def generate_faces(
     max_attempts_factor: int = 3,
     request_sleep_s: tuple[float, float] = (0.5, 1.5),
     strict_completion: bool = False,
+    source_dir: Path | str | None = None,
+    source_retries: int = 2,
+    source_backoff_s: float = 0.25,
+    source_shuffle: bool = False,
     config: GenerationConfig | None = None,
 ) -> GenerationResult:
     """Generate a synthetic face dataset.
@@ -78,6 +82,10 @@ def generate_faces(
         max_attempts_factor: Attempts budget multiplier.
         request_sleep_s: Min/max sleep between source fetches.
         strict_completion: Raise if fewer images than requested are produced.
+        source_dir: Local image folder (offline source; replaces TPNDE).
+        source_retries: Extra TPNDE attempts after the first failure.
+        source_backoff_s: Base seconds between TPNDE retries.
+        source_shuffle: Shuffle local directory listing once.
         config: Full config object; when set, other fields are ignored.
 
     Returns:
@@ -136,6 +144,10 @@ def generate_faces(
             max_attempts_factor=max_attempts_factor,
             request_sleep_s=request_sleep_s,
             strict_completion=strict_completion,
+            source_dir=source_dir,
+            source_retries=source_retries,
+            source_backoff_s=source_backoff_s,
+            source_shuffle=source_shuffle,
         )
     return _generate_faces(config)
 

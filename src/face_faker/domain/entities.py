@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 
@@ -54,7 +55,7 @@ class PoseLimits:
             _require_non_negative(name, getattr(self, name))
 
     @classmethod
-    def symmetric(cls, yaw: float, pitch: float, roll: float) -> "PoseLimits":
+    def symmetric(cls, yaw: float, pitch: float, roll: float) -> PoseLimits:
         """Build limits where left/right and up/down share one value.
 
         Args:
@@ -348,6 +349,11 @@ class GenerationConfig:
         request_sleep_s: Inclusive min/max sleep between source fetches.
         strict_completion: Raise :class:`GenerationIncompleteError` when the
             requested count is not reached.
+        source_dir: Local image directory. When set, uses
+            ``LocalDirectorySource`` instead of TPNDE.
+        source_retries: Extra TPNDE attempts after the first failure.
+        source_backoff_s: Base backoff seconds between TPNDE retries.
+        source_shuffle: Shuffle local directory listing once at start.
     """
 
     output_dir: Path | str = "id_faces"
@@ -364,18 +370,28 @@ class GenerationConfig:
     max_attempts_factor: int = 3
     request_sleep_s: tuple[float, float] = (0.5, 1.5)
     strict_completion: bool = False
+    source_dir: Path | str | None = None
+    source_retries: int = 2
+    source_backoff_s: float = 0.25
+    source_shuffle: bool = False
 
     def __post_init__(self) -> None:
         if self.count < 1:
             raise ValueError("count must be >= 1")
         if self.max_attempts_factor < 1:
             raise ValueError("max_attempts_factor must be >= 1")
+        if self.source_retries < 0:
+            raise ValueError("source_retries must be >= 0")
+        if self.source_backoff_s < 0:
+            raise ValueError("source_backoff_s must be >= 0")
         low, high = self.request_sleep_s
         if low < 0 or high < low:
             raise ValueError("request_sleep_s must satisfy 0 <= low <= high")
         object.__setattr__(self, "output_dir", Path(self.output_dir))
         if self.models_dir is not None:
             object.__setattr__(self, "models_dir", Path(self.models_dir))
+        if self.source_dir is not None:
+            object.__setattr__(self, "source_dir", Path(self.source_dir))
 
     @property
     def max_attempts(self) -> int:

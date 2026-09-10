@@ -25,7 +25,7 @@ class GenderLabel(str, Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def normalize(cls, raw: str | None) -> "GenderLabel":
+    def normalize(cls, raw: str | None) -> GenderLabel:
         """Map free-form classifier output to a :class:`GenderLabel`.
 
         Accepts common DeepFace / OpenCV spellings such as ``Man``, ``Woman``,

@@ -9,7 +9,7 @@ from face_faker.domain.enums import GenderLabel
 
 
 def test_version() -> None:
-    assert face_faker.__version__ == "3.2.0"
+    assert face_faker.__version__ == "3.3.0"
 
 
 def test_public_exports() -> None:
@@ -25,8 +25,8 @@ def test_public_exports() -> None:
 
 
 def test_generate_id_faces_is_deprecated_alias(monkeypatch, tmp_path) -> None:
-    from face_faker.domain.entities import GenerationResult, GenerationStats
     from face_faker import interfaces
+    from face_faker.domain.entities import GenerationResult, GenerationStats
 
     stats = GenerationStats(1, 1, 1, 0, 0, 0, 0, 1, 0.0)
 
