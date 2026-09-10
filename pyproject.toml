@@ -105,11 +105,13 @@ module = [
     "deepface",
     "rembg",
     "numpy",
+    "tqdm",
     "cv2.*",
     "dlib.*",
     "deepface.*",
     "rembg.*",
     "numpy.*",
+    "tqdm.*",
 ]
 ignore_missing_imports = true
 

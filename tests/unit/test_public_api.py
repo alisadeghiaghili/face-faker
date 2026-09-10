@@ -9,7 +9,7 @@ from face_faker.domain.enums import GenderLabel
 
 
 def test_version() -> None:
-    assert face_faker.__version__ == "3.3.0"
+    assert face_faker.__version__ == "3.4.0"
 
 
 def test_public_exports() -> None:

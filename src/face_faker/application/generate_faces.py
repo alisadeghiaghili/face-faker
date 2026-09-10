@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 import time
 import warnings
@@ -209,6 +210,10 @@ def generate_faces(
             failed_fetches += 1
             continue
 
+        source_ref = getattr(source, "last_source_ref", None)
+        if source_ref is not None:
+            source_ref = str(source_ref)
+
         try:
             image = _to_rgb(raw)
         except Exception as exc:  # noqa: BLE001
@@ -248,6 +253,18 @@ def generate_faces(
                 logger.warning("Gender classification failed: %s", exc)
                 gender = GenderLabel.UNKNOWN
 
+        if config.gender_max_share is not None and gender is not GenderLabel.UNKNOWN:
+            share_limit = math.ceil(config.count * config.gender_max_share)
+            current = male if gender is GenderLabel.MALE else female
+            if current >= share_limit:
+                filtered_out += 1
+                logger.debug(
+                    "Skipping %s face to honor gender_max_share=%s",
+                    gender.value,
+                    config.gender_max_share,
+                )
+                continue
+
         working = image
         if config.remove_bg and background_remover is not None:
             working = background_remover.remove(image)
@@ -269,6 +286,7 @@ def generate_faces(
             background_removed=config.remove_bg,
             frontal_filtered=config.frontal_only,
             frontal=metrics if config.frontal_only else None,
+            source_ref=source_ref,
         )
         records.append(record)
 

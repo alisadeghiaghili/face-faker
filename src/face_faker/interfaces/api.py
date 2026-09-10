@@ -51,7 +51,9 @@ def generate_faces(
     source_retries: int = 2,
     source_backoff_s: float = 0.25,
     source_shuffle: bool = False,
+    gender_max_share: float | None = None,
     config: GenerationConfig | None = None,
+    progress: Any | None = None,
 ) -> GenerationResult:
     """Generate a synthetic face dataset.
 
@@ -86,7 +88,9 @@ def generate_faces(
         source_retries: Extra TPNDE attempts after the first failure.
         source_backoff_s: Base seconds between TPNDE retries.
         source_shuffle: Shuffle local directory listing once.
+        gender_max_share: Cap on male/female share of produced images.
         config: Full config object; when set, other fields are ignored.
+        progress: Optional ``(produced, requested)`` callback for UI progress.
 
     Returns:
         :class:`GenerationResult` with records, stats, and written paths.
@@ -148,8 +152,9 @@ def generate_faces(
             source_retries=source_retries,
             source_backoff_s=source_backoff_s,
             source_shuffle=source_shuffle,
+            gender_max_share=gender_max_share,
         )
-    return _generate_faces(config)
+    return _generate_faces(config, progress=progress)
 
 
 def generate_id_faces(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:

@@ -65,6 +65,12 @@ class ThisPersonDoesNotExistSource:
         self.retries = retries
         self.backoff_s = backoff_s
         self._sleep = sleep_fn
+        self._last_source_ref: str | None = None
+
+    @property
+    def last_source_ref(self) -> str | None:
+        """URI-style provenance for the last successful fetch."""
+        return self._last_source_ref
 
     def fetch(self) -> Any | None:
         """Download one face image, retrying transient failures.
@@ -95,6 +101,7 @@ class ThisPersonDoesNotExistSource:
                     raw = Image.open(BytesIO(response.content))
                     raw.load()
                     image = raw if raw.mode == "RGB" else raw.convert("RGB")
+                    self._last_source_ref = f"tpnd://{self._url.removeprefix('https://').rstrip('/')}"
                     return image
             except Exception as exc:  # noqa: BLE001 - batch must not crash
                 last_error = exc

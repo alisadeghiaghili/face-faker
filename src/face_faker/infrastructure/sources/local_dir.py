@@ -60,6 +60,7 @@ class LocalDirectorySource:
             rng.shuffle(files)
         self._files: tuple[Path, ...] = tuple(files)
         self._index = 0
+        self._last_source_ref: str | None = None
 
     @staticmethod
     def _list_images(directory: Path, *, recursive: bool) -> list[Path]:
@@ -90,6 +91,11 @@ class LocalDirectorySource:
         """Immutable listing of source image paths."""
         return self._files
 
+    @property
+    def last_source_ref(self) -> str | None:
+        """Absolute path string of the most recently fetched file."""
+        return self._last_source_ref
+
     def fetch(self) -> Any | None:
         """Load the next image in the cycle.
 
@@ -104,9 +110,11 @@ class LocalDirectorySource:
             raw = Image.open(path)
             raw.load()
             image = raw if raw.mode == "RGB" else raw.convert("RGB")
+            self._last_source_ref = str(path.resolve())
             return image
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to read %s: %s", path, exc)
+            self._last_source_ref = None
             return None
 
     def __iter__(self) -> Iterable[Path]:
