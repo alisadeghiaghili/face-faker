@@ -1,14 +1,9 @@
-"""Face Faker — synthetic face dataset toolkit.
+"""Domain layer: entities, value objects, errors, and ports.
 
-Public surface:
-
-- :func:`generate_faces` — primary generation API
-- :class:`GenerationConfig` / :class:`GenerationResult` / :class:`GenerationStats`
-- :class:`GenderLabel`
-- Typed errors under :mod:`face_faker.domain.errors`
+This package is pure Python (no I/O, no heavy CV imports). Infrastructure
+adapters implement the ports defined here.
 """
 
-from face_faker._version import __version__
 from face_faker.domain.entities import (
     FrontalMetrics,
     GenerationConfig,
@@ -24,12 +19,23 @@ from face_faker.domain.errors import (
     MissingModelError,
     SourceUnavailableError,
 )
-from face_faker.interfaces.api import generate_faces, generate_id_faces
+from face_faker.domain.ports import (
+    BackgroundRemover,
+    FaceSource,
+    FaceStore,
+    FrontalFilter,
+    GenderClassifier,
+)
 
 __all__ = [
+    "BackgroundRemover",
     "DependencyError",
     "FaceFakerError",
+    "FaceSource",
+    "FaceStore",
+    "FrontalFilter",
     "FrontalMetrics",
+    "GenderClassifier",
     "GenderLabel",
     "GenerationConfig",
     "GenerationIncompleteError",
@@ -39,7 +45,4 @@ __all__ = [
     "MetadataSchemaVersion",
     "MissingModelError",
     "SourceUnavailableError",
-    "__version__",
-    "generate_faces",
-    "generate_id_faces",
 ]
