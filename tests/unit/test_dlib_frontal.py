@@ -27,9 +27,11 @@ def test_filter_holds_thresholds_and_path(tmp_path) -> None:
         models_dir=tmp_path,
         yaw_threshold=10.0,
         pitch_threshold=12.0,
+        roll_threshold=8.0,
     )
     assert filt.yaw_threshold == 10.0
     assert filt.pitch_threshold == 12.0
+    assert filt.roll_threshold == 8.0
     assert filt.predictor_path.name == "shape_predictor_68_face_landmarks.dat"
 
 

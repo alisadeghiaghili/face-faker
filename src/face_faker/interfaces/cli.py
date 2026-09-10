@@ -71,7 +71,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--pitch-threshold",
         type=float,
         default=15.0,
-        help="Absolute pitch threshold in degrees (default: 15)",
+        help="Absolute pitch (up/down gaze) threshold in degrees (default: 15)",
+    )
+    gen.add_argument(
+        "--roll-threshold",
+        type=float,
+        default=15.0,
+        help="Absolute roll (head tilt) threshold in degrees (default: 15)",
     )
     gen.add_argument(
         "--no-gender",
@@ -125,6 +131,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
         frontal_only=args.frontal_only,
         yaw_threshold=args.yaw_threshold,
         pitch_threshold=args.pitch_threshold,
+        roll_threshold=args.roll_threshold,
         classify_gender=not args.no_gender,
         require_gender=args.require_gender,
         grayscale=not args.color,

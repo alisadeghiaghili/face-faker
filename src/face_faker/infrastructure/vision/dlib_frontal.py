@@ -89,8 +89,9 @@ class DlibSolvePnPFrontalFilter:
 
     Args:
         models_dir: Optional explicit models directory.
-        yaw_threshold: Absolute yaw acceptance threshold in degrees.
-        pitch_threshold: Absolute pitch acceptance threshold in degrees.
+        yaw_threshold: Absolute yaw (left/right turn) threshold in degrees.
+        pitch_threshold: Absolute pitch (up/down gaze) threshold in degrees.
+        roll_threshold: Absolute roll (in-plane tilt) threshold in degrees.
         predictor_path: Explicit landmark model file path.
 
     Raises:
@@ -99,9 +100,11 @@ class DlibSolvePnPFrontalFilter:
         DependencyError: Raised when OpenCV/dlib cannot be imported.
 
     Example:
-        >>> filt = DlibSolvePnPFrontalFilter(yaw_threshold=10.0, pitch_threshold=10.0)
-        >>> filt.yaw_threshold
-        10.0
+        >>> filt = DlibSolvePnPFrontalFilter(
+        ...     yaw_threshold=10.0, pitch_threshold=12.0, roll_threshold=8.0
+        ... )
+        >>> filt.roll_threshold
+        8.0
     """
 
     def __init__(
@@ -109,10 +112,12 @@ class DlibSolvePnPFrontalFilter:
         models_dir: Path | str | None = None,
         yaw_threshold: float = 15.0,
         pitch_threshold: float = 15.0,
+        roll_threshold: float = 15.0,
         predictor_path: Path | str | None = None,
     ) -> None:
         self.yaw_threshold = float(yaw_threshold)
         self.pitch_threshold = float(pitch_threshold)
+        self.roll_threshold = float(roll_threshold)
         self._predictor_path = (
             Path(predictor_path) if predictor_path is not None else landmark_model_path(models_dir)
         )
@@ -209,4 +214,5 @@ class DlibSolvePnPFrontalFilter:
             roll=roll,
             yaw_threshold=self.yaw_threshold,
             pitch_threshold=self.pitch_threshold,
+            roll_threshold=self.roll_threshold,
         )

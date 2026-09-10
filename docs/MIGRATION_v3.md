@@ -9,7 +9,7 @@ v3.0.0 is a **breaking** release focused on correctness.
 | `generate_id_faces(...)` | `generate_faces(...)` returns `GenerationResult` |
 | `num_images` | `count` |
 | `remove_bg=True` default | `remove_bg=False` default |
-| `frontal_threshold=15` (degrees, but used as EAR ratio) | `yaw_threshold` / `pitch_threshold` in degrees |
+| `frontal_threshold=15` (degrees, but used as EAR ratio) | `yaw_threshold` / `pitch_threshold` / `roll_threshold` in degrees |
 | metadata `pose.yaw/pitch/roll` from EAR values | metadata `frontal.yaw/pitch/roll` from solvePnP |
 | gender `Male`/`Female`/other | gender `male`/`female`/`unknown` |
 | silent failures | typed errors + logging |
@@ -26,8 +26,13 @@ face-faker generate --count 100 --remove-bg --frontal-only --threshold 15
 
 # v3
 face-faker generate --count 100 --remove-bg --frontal-only \
-  --yaw-threshold 15 --pitch-threshold 15
+  --yaw-threshold 15 --pitch-threshold 15 --roll-threshold 15
 ```
+
+### v3.1 note
+
+`roll_threshold` (head tilt) now participates in frontal acceptance.
+Previously roll was recorded in metadata but never filtered.
 
 `--threshold` is gone. Use degree thresholds.
 

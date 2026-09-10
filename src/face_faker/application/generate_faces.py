@@ -137,6 +137,7 @@ def generate_faces(
             models_dir=config.models_dir,
             yaw_threshold=config.yaw_threshold,
             pitch_threshold=config.pitch_threshold,
+            roll_threshold=config.roll_threshold,
         )
 
     if gender_classifier is None and config.classify_gender:
