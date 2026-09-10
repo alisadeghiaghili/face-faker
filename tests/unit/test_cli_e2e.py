@@ -80,4 +80,4 @@ def test_cli_missing_local_source_dir(tmp_path: Path) -> None:
             "--no-gender",
         ]
     )
-    assert code == cli.EXIT_UNEXPECTED
+    assert code == cli.EXIT_SOURCE
