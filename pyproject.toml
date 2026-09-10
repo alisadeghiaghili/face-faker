@@ -81,6 +81,7 @@ testpaths = ["tests"]
 pythonpath = ["src", "."]
 markers = [
     "network: tests that hit the network (deselected by default in CI)",
+    "integration: tests that need optional CV extras and/or model files",
 ]
 addopts = "-q"
 

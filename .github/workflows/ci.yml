@@ -54,6 +54,35 @@ jobs:
       - name: Pose math tests
         run: pytest tests/unit/test_dlib_frontal.py -v
 
+  dlib-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache landmark model
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: dlib-landmarks-68-v1
+      - name: Install system deps and frontal extras
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]' opencv-python-headless numpy
+          pip install dlib || echo "dlib install failed; integration tests will skip"
+      - name: Download landmark model
+        env:
+          FACE_FAKER_MODELS_DIR: ${{ github.workspace }}/models
+        run: |
+          python scripts/download_landmark_model.py --dest "$FACE_FAKER_MODELS_DIR"
+      - name: Run integration tests
+        env:
+          FACE_FAKER_MODELS_DIR: ${{ github.workspace }}/models
+        run: pytest tests/integration -v
+
   package:
     runs-on: ubuntu-latest
     steps:
