@@ -1,4 +1,4 @@
-"""dlib landmark + OpenCV solvePnP head-pose frontal filter."""
+"""dlib landmark + OpenCV solvePnP head-pose and face-box filter."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from face_faker.config import landmark_model_path
-from face_faker.domain.entities import FrontalMetrics
+from face_faker.domain.entities import FaceBox, FrontalMetrics, PoseLimits
 from face_faker.domain.errors import DependencyError, MissingModelError
 from face_faker.logging_config import get_logger
 
@@ -55,8 +55,6 @@ def rotation_vector_to_euler_degrees(
     """Convert a Rodrigues rotation vector to (yaw, pitch, roll) degrees.
 
     Uses ``cv2.decomposeProjectionMatrix`` on the concatenated pose matrix.
-    Angles are returned in the OpenCV camera convention commonly used for
-    head-pose estimation.
 
     Args:
         rotation_vector: Rodrigues rotation vector from ``solvePnP``.
@@ -75,49 +73,76 @@ def rotation_vector_to_euler_degrees(
         True
     """
     rotation_mat, _ = cv2_module.Rodrigues(rotation_vector)
-    # 3x4 projection-style matrix: [R | t] with t=0 is enough for angles.
     pose_mat = np_module.hstack((rotation_mat, np_module.zeros((3, 1), dtype=np.float64)))
     _, _, _, _, _, _, euler_angles = cv2_module.decomposeProjectionMatrix(pose_mat)
     pitch, yaw, roll = (float(v) for v in np_module.asarray(euler_angles).reshape(-1))
     return yaw, pitch, roll
 
 
-class DlibSolvePnPFrontalFilter:
-    """Estimate head pose via dlib landmarks and OpenCV solvePnP.
+def face_rect_to_box(rect: Any, width: int, height: int) -> FaceBox:
+    """Convert a dlib rectangle to a normalized :class:`FaceBox`.
 
-    The filter caches the dlib shape predictor across calls.
+    Args:
+        rect: dlib rectangle (or object with left/right/top/bottom).
+        width: Image width in pixels.
+        height: Image height in pixels.
+
+    Returns:
+        Normalized face geometry.
+
+    Example:
+        >>> class R:
+        ...     left, right, top, bottom = 10, 30, 5, 25
+        >>> box = face_rect_to_box(R(), 100, 100)
+        >>> box.center_x
+        0.2
+    """
+    left = float(rect.left())
+    right = float(rect.right())
+    top = float(rect.top())
+    bottom = float(rect.bottom())
+    w = max(width, 1)
+    h = max(height, 1)
+    return FaceBox(
+        center_x=((left + right) / 2.0) / w,
+        center_y=((top + bottom) / 2.0) / h,
+        width_ratio=(right - left) / w,
+        height_ratio=(bottom - top) / h,
+    )
+
+
+class DlibSolvePnPFrontalFilter:
+    """Estimate head pose and face box via dlib + OpenCV solvePnP.
+
+    Caches the dlib shape predictor across calls. Evaluate returns
+    :class:`FrontalMetrics` including per-direction :class:`PoseLimits` and
+    normalized :class:`FaceBox` geometry for region filtering.
 
     Args:
         models_dir: Optional explicit models directory.
-        yaw_threshold: Absolute yaw (left/right turn) threshold in degrees.
-        pitch_threshold: Absolute pitch (up/down gaze) threshold in degrees.
-        roll_threshold: Absolute roll (in-plane tilt) threshold in degrees.
+        pose_limits: Per-direction rotation limits in degrees.
         predictor_path: Explicit landmark model file path.
 
     Raises:
-        MissingModelError: Only raised when :meth:`evaluate` runs and the
-            model file is absent (lazy validation by design).
-        DependencyError: Raised when OpenCV/dlib cannot be imported.
+        MissingModelError: Raised when :meth:`evaluate` runs without a model.
+        DependencyError: Raised when OpenCV/dlib/numpy cannot be imported.
 
     Example:
+        >>> from face_faker.domain import PoseLimits
         >>> filt = DlibSolvePnPFrontalFilter(
-        ...     yaw_threshold=10.0, pitch_threshold=12.0, roll_threshold=8.0
+        ...     pose_limits=PoseLimits(12, 10, 15, 8, 10)
         ... )
-        >>> filt.roll_threshold
-        8.0
+        >>> filt.pose_limits.yaw_right
+        10.0
     """
 
     def __init__(
         self,
         models_dir: Path | str | None = None,
-        yaw_threshold: float = 15.0,
-        pitch_threshold: float = 15.0,
-        roll_threshold: float = 15.0,
+        pose_limits: PoseLimits | None = None,
         predictor_path: Path | str | None = None,
     ) -> None:
-        self.yaw_threshold = float(yaw_threshold)
-        self.pitch_threshold = float(pitch_threshold)
-        self.roll_threshold = float(roll_threshold)
+        self.pose_limits = pose_limits or PoseLimits()
         self._predictor_path = (
             Path(predictor_path) if predictor_path is not None else landmark_model_path(models_dir)
         )
@@ -133,7 +158,7 @@ class DlibSolvePnPFrontalFilter:
         """Load dlib detector/predictor once and cache them."""
         if self._predictor is not None:
             return
-        cv2, dlib, _ = _require_cv_deps()
+        _, dlib, _ = _require_cv_deps()
         path = self._predictor_path
         if not path.exists():
             raise MissingModelError(
@@ -146,7 +171,7 @@ class DlibSolvePnPFrontalFilter:
         logger.debug("Loaded dlib predictor from %s", path)
 
     def evaluate(self, image: Any) -> FrontalMetrics | None:
-        """Estimate head pose for ``image``.
+        """Estimate head pose and face box for ``image``.
 
         Args:
             image: RGB PIL image (or array-like convertible to RGB).
@@ -177,7 +202,9 @@ class DlibSolvePnPFrontalFilter:
             logger.debug("No face detected for pose estimation")
             return None
 
-        landmarks = self._predictor(gray, faces[0])
+        face_rect = faces[0]
+        box = face_rect_to_box(face_rect, width=width, height=height)
+        landmarks = self._predictor(gray, face_rect)
         image_points = np.array(
             [(landmarks.part(i).x, landmarks.part(i).y) for i in _LANDMARK_INDICES],
             dtype=np.float64,
@@ -212,7 +239,6 @@ class DlibSolvePnPFrontalFilter:
             yaw=yaw,
             pitch=pitch,
             roll=roll,
-            yaw_threshold=self.yaw_threshold,
-            pitch_threshold=self.pitch_threshold,
-            roll_threshold=self.roll_threshold,
+            limits=self.pose_limits,
+            box=box,
         )

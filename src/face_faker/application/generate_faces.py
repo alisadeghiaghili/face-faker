@@ -135,9 +135,7 @@ def generate_faces(
 
         frontal_filter = DlibSolvePnPFrontalFilter(
             models_dir=config.models_dir,
-            yaw_threshold=config.yaw_threshold,
-            pitch_threshold=config.pitch_threshold,
-            roll_threshold=config.roll_threshold,
+            pose_limits=config.pose_limits,
         )
 
     if gender_classifier is None and config.classify_gender:
@@ -197,12 +195,15 @@ def generate_faces(
         metrics: FrontalMetrics | None = None
         if config.frontal_only and frontal_filter is not None:
             metrics = frontal_filter.evaluate(image)
-            if metrics is None or not metrics.is_frontal():
+            if metrics is None or not metrics.is_frontal(config.face_region):
                 filtered_out += 1
                 logger.debug(
-                    "Filtered non-frontal image (yaw=%s pitch=%s)",
+                    "Filtered face (yaw=%s pitch=%s roll=%s center=(%s, %s))",
                     None if metrics is None else round(metrics.yaw, 2),
                     None if metrics is None else round(metrics.pitch, 2),
+                    None if metrics is None else round(metrics.roll, 2),
+                    None if metrics is None else round(metrics.box.center_x, 3),
+                    None if metrics is None else round(metrics.box.center_y, 3),
                 )
                 continue
 

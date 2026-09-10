@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from face_faker.application.generate_faces import generate_faces as _generate_faces
-from face_faker.domain.entities import GenerationConfig, GenerationResult
+from face_faker.domain.entities import (
+    FaceRegion,
+    GenerationConfig,
+    GenerationResult,
+    PoseLimits,
+)
 from face_faker.domain.errors import (
     DependencyError,
     FaceFakerError,
@@ -24,9 +29,17 @@ def generate_faces(
     save_metadata: bool = True,
     remove_bg: bool = False,
     frontal_only: bool = False,
-    yaw_threshold: float = 15.0,
-    pitch_threshold: float = 15.0,
+    yaw_left_threshold: float = 15.0,
+    yaw_right_threshold: float = 15.0,
+    pitch_up_threshold: float = 15.0,
+    pitch_down_threshold: float = 15.0,
     roll_threshold: float = 15.0,
+    face_center_x_min: float = 0.0,
+    face_center_x_max: float = 1.0,
+    face_center_y_min: float = 0.0,
+    face_center_y_max: float = 1.0,
+    pose_limits: PoseLimits | None = None,
+    face_region: FaceRegion | None = None,
     classify_gender: bool = True,
     require_gender: bool = False,
     grayscale: bool = True,
@@ -46,10 +59,18 @@ def generate_faces(
         count: Number of faces to produce.
         save_metadata: Write ``metadata.json``, ``stats.json``, ``faces.csv``.
         remove_bg: Remove background (requires rembg).
-        frontal_only: Keep only frontal poses (requires dlib + OpenCV).
-        yaw_threshold: Absolute yaw (left/right turn) limit in degrees.
-        pitch_threshold: Absolute pitch (up/down gaze) limit in degrees.
-        roll_threshold: Absolute roll (in-plane head tilt) limit in degrees.
+        frontal_only: Keep only faces that pass pose + region filters.
+        yaw_left_threshold: Max yaw toward subject's left (degrees).
+        yaw_right_threshold: Max |yaw| toward subject's right (degrees).
+        pitch_up_threshold: Max looking-up pitch (degrees).
+        pitch_down_threshold: Max |looking-down| pitch (degrees).
+        roll_threshold: Max absolute head tilt (degrees).
+        face_center_x_min: Min face-center X in [0, 1] (left bound).
+        face_center_x_max: Max face-center X in [0, 1] (right bound).
+        face_center_y_min: Min face-center Y in [0, 1] (top bound).
+        face_center_y_max: Max face-center Y in [0, 1] (bottom bound).
+        pose_limits: Full :class:`PoseLimits` (overrides scalar pose args).
+        face_region: Full :class:`FaceRegion` (overrides scalar region args).
         classify_gender: Run gender classification (requires deepface).
         require_gender: Fail if gender classification is unavailable.
         grayscale: Convert outputs to grayscale (preserves alpha).
@@ -72,20 +93,42 @@ def generate_faces(
     Example:
         >>> from face_faker import generate_faces
         >>> # doctest: +SKIP
-        >>> result = generate_faces("out/faces", count=5, remove_bg=False)
+        >>> result = generate_faces(
+        ...     "out/faces",
+        ...     count=5,
+        ...     frontal_only=True,
+        ...     yaw_left_threshold=12,
+        ...     yaw_right_threshold=10,
+        ...     pitch_up_threshold=8,
+        ...     pitch_down_threshold=12,
+        ...     face_center_x_min=0.3,
+        ...     face_center_x_max=0.7,
+        ... )
         >>> result.stats.produced
         5
     """
     if config is None:
+        limits = pose_limits or PoseLimits(
+            yaw_left=yaw_left_threshold,
+            yaw_right=yaw_right_threshold,
+            pitch_up=pitch_up_threshold,
+            pitch_down=pitch_down_threshold,
+            roll=roll_threshold,
+        )
+        region = face_region or FaceRegion(
+            center_x_min=face_center_x_min,
+            center_x_max=face_center_x_max,
+            center_y_min=face_center_y_min,
+            center_y_max=face_center_y_max,
+        )
         config = GenerationConfig(
             output_dir=output_dir,
             count=count,
             save_metadata=save_metadata,
             remove_bg=remove_bg,
             frontal_only=frontal_only,
-            yaw_threshold=yaw_threshold,
-            pitch_threshold=pitch_threshold,
-            roll_threshold=roll_threshold,
+            pose_limits=limits,
+            face_region=region,
             classify_gender=classify_gender,
             require_gender=require_gender,
             grayscale=grayscale,

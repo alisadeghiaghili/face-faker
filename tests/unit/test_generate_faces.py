@@ -121,12 +121,61 @@ def test_frontal_metadata_not_labeled_ears(tmp_path, sleep_noop) -> None:
         "pitch",
         "roll",
         "method",
-        "yaw_threshold",
-        "pitch_threshold",
-        "roll_threshold",
+        "limits",
+        "box",
     }
+    assert "yaw_threshold" not in frontal_meta
     assert "left_ear" not in frontal_meta
     assert "ear_asymmetry" not in frontal_meta
+
+
+def test_frontal_filter_rejects_face_outside_region(tmp_path, sleep_noop) -> None:
+    from face_faker.domain.entities import FaceRegion
+
+    images = [make_image("red"), make_image("green")]
+    filt = FakeFrontalFilter(
+        [
+            frontal(center_x=0.9, center_y=0.5),
+            frontal(center_x=0.5, center_y=0.5),
+        ]
+    )
+    cfg = _config(tmp_path, count=1, frontal_only=True)
+    object.__setattr__(cfg, "face_region", FaceRegion(0.3, 0.7, 0.2, 0.8))
+    result = generate_faces(
+        cfg,
+        source=FakeSource(images),
+        frontal_filter=filt,
+        gender_classifier=FakeGenderClassifier(),
+        store=FakeStore(),
+        sleep_fn=sleep_noop,
+    )
+    assert result.stats.filtered_out == 1
+    assert result.records[0].frontal is not None
+    assert result.records[0].frontal.box.center_x == 0.5
+
+
+def test_frontal_filter_rejects_asymmetric_yaw(tmp_path, sleep_noop) -> None:
+    from face_faker.domain.entities import PoseLimits
+
+    images = [make_image("red"), make_image("green")]
+    limits = PoseLimits(yaw_left=20.0, yaw_right=5.0, pitch_up=15.0, pitch_down=15.0, roll=15.0)
+    filt = FakeFrontalFilter(
+        [
+            frontal(yaw=-8.0, limits=limits),
+            frontal(yaw=15.0, limits=limits),
+        ]
+    )
+    result = generate_faces(
+        _config(tmp_path, count=1, frontal_only=True),
+        source=FakeSource(images),
+        frontal_filter=filt,
+        gender_classifier=FakeGenderClassifier(),
+        store=FakeStore(),
+        sleep_fn=sleep_noop,
+    )
+    assert result.stats.filtered_out == 1
+    assert result.records[0].frontal is not None
+    assert result.records[0].frontal.yaw == 15.0
 
 
 def test_frontal_filter_rejects_excessive_roll_tilt(tmp_path, sleep_noop) -> None:

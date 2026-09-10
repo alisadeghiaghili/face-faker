@@ -26,20 +26,33 @@ interfaces (CLI / public API)
             ← infrastructure (tpnd, dlib solvePnP, deepface, rembg, local fs)
 ```
 
-## Frontal filter (v3.0+)
+## Face geometry filter (v3.2+)
 
-dlib 68 landmarks → six 2D points → OpenCV `solvePnP` → euler `(yaw, pitch, roll)` degrees.
+dlib 68 landmarks → six 2D points → OpenCV `solvePnP` → euler `(yaw, pitch, roll)` degrees,
+plus dlib face rectangle → normalized `FaceBox`.
 
-Accept when all of the following hold:
+Accept when **all** of the following hold:
 
-- `|yaw| <= yaw_threshold` (left/right turn)
-- `|pitch| <= pitch_threshold` (up/down gaze)
-- `|roll| <= roll_threshold` (in-plane head tilt)
+**Rotation (four directions + tilt)**
+
+- `yaw <= pose_limits.yaw_left` when `yaw >= 0` (turn toward subject's left)
+- `(-yaw) <= pose_limits.yaw_right` when `yaw < 0` (turn toward subject's right)
+- `pitch <= pose_limits.pitch_up` when `pitch >= 0` (looking up)
+- `(-pitch) <= pose_limits.pitch_down` when `pitch < 0` (looking down)
+- `|roll| <= pose_limits.roll` (in-plane head tilt)
+
+**Position (four frame directions)**
+
+- `face_region.center_x_min <= box.center_x <= face_region.center_x_max` (left/right)
+- `face_region.center_y_min <= box.center_y <= face_region.center_y_max` (top/bottom)
+
+Default region is the full frame (`0..1`), so position filtering is opt-in.
 
 ## Versioning
 
 - v3.0.0 — breaking correctness release (pose units, gender labels, remove_bg default, schema).
 - v3.1.0 — roll/tilt threshold participates in frontal acceptance.
+- v3.2.0 — per-direction pose limits (L/R/U/D) + face-center region filter.
 
 ## Gender
 

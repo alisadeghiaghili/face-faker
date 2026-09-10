@@ -9,7 +9,7 @@ v3.0.0 is a **breaking** release focused on correctness.
 | `generate_id_faces(...)` | `generate_faces(...)` returns `GenerationResult` |
 | `num_images` | `count` |
 | `remove_bg=True` default | `remove_bg=False` default |
-| `frontal_threshold=15` (degrees, but used as EAR ratio) | `yaw_threshold` / `pitch_threshold` / `roll_threshold` in degrees |
+| `frontal_threshold=15` (degrees, but used as EAR ratio) | `PoseLimits` (yaw L/R, pitch U/D, roll) in degrees + optional `FaceRegion` |
 | metadata `pose.yaw/pitch/roll` from EAR values | metadata `frontal.yaw/pitch/roll` from solvePnP |
 | gender `Male`/`Female`/other | gender `male`/`female`/`unknown` |
 | silent failures | typed errors + logging |
@@ -24,17 +24,24 @@ metadata dicts and emits `DeprecationWarning`.
 # v2
 face-faker generate --count 100 --remove-bg --frontal-only --threshold 15
 
-# v3
+# v3.2
 face-faker generate --count 100 --remove-bg --frontal-only \
-  --yaw-threshold 15 --pitch-threshold 15 --roll-threshold 15
+  --yaw-left 15 --yaw-right 15 \
+  --pitch-up 15 --pitch-down 15 \
+  --roll-threshold 15 \
+  --face-x-min 0.2 --face-x-max 0.8 \
+  --face-y-min 0.15 --face-y-max 0.85
 ```
 
 ### v3.1 note
 
-`roll_threshold` (head tilt) now participates in frontal acceptance.
-Previously roll was recorded in metadata but never filtered.
+`roll_threshold` (head tilt) participates in frontal acceptance.
 
-`--threshold` is gone. Use degree thresholds.
+### v3.2 note
+
+Symmetric `--yaw-threshold` / `--pitch-threshold` are replaced by
+per-direction limits (`--yaw-left/--yaw-right`, `--pitch-up/--pitch-down`).
+Face-center region flags control where the face may sit in the frame.
 
 ## Models
 

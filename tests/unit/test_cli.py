@@ -13,9 +13,48 @@ def test_parser_defaults_remove_bg_off() -> None:
     parser = cli.build_parser()
     args = parser.parse_args(["generate"])
     assert args.remove_bg is False
-    assert args.yaw_threshold == 15.0
-    assert args.pitch_threshold == 15.0
+    assert args.yaw_left == 15.0
+    assert args.yaw_right == 15.0
+    assert args.pitch_up == 15.0
+    assert args.pitch_down == 15.0
     assert args.roll_threshold == 15.0
+    assert args.face_x_min == 0.0
+    assert args.face_x_max == 1.0
+    assert args.face_y_min == 0.0
+    assert args.face_y_max == 1.0
+
+
+def test_parser_accepts_directional_pose_and_region() -> None:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "generate",
+            "--yaw-left",
+            "12",
+            "--yaw-right",
+            "8",
+            "--pitch-up",
+            "6",
+            "--pitch-down",
+            "10",
+            "--roll-threshold",
+            "5",
+            "--face-x-min",
+            "0.25",
+            "--face-x-max",
+            "0.75",
+            "--face-y-min",
+            "0.15",
+            "--face-y-max",
+            "0.85",
+        ]
+    )
+    assert args.yaw_left == 12.0
+    assert args.yaw_right == 8.0
+    assert args.pitch_up == 6.0
+    assert args.pitch_down == 10.0
+    assert args.face_x_min == 0.25
+    assert args.face_y_max == 0.85
 
 
 def test_info_exits_zero(capsys) -> None:
