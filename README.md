@@ -109,6 +109,24 @@ result = generate_faces(
 face-faker generate --count 30 --source-dir ./datasets/faces --source-shuffle
 ```
 
+## Balancing & provenance
+
+```python
+# Cap male/female share of the produced batch (e.g. max 55% each)
+result = generate_faces(
+    "out/balanced",
+    count=100,
+    gender_max_share=0.55,
+    source_dir="datasets/faces",
+)
+# Each record may include source_ref (local path or tpnd:// URI)
+print(result.records[0].source_ref)
+```
+
+```bash
+face-faker generate --count 100 --gender-max-share 0.55 --progress
+```
+
 ## CLI
 
 ```bash
@@ -120,7 +138,8 @@ face-faker generate --count 50 --frontal-only \
   --face-x-min 0.3 --face-x-max 0.7 \
   --face-y-min 0.2 --face-y-max 0.8
 face-faker generate --count 10 --remove-bg --color
-face-faker generate --count 30 --source-dir ./inbox --source-shuffle
+face-faker generate --count 30 --source-dir ./inbox --source-shuffle --progress
+face-faker generate --count 100 --gender-max-share 0.55 --progress
 face-faker info
 python -m face_faker --version
 ```

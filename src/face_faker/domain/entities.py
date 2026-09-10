@@ -354,6 +354,9 @@ class GenerationConfig:
         source_retries: Extra TPNDE attempts after the first failure.
         source_backoff_s: Base backoff seconds between TPNDE retries.
         source_shuffle: Shuffle local directory listing once at start.
+        gender_max_share: Optional upper share (0..1] of produced images
+            allowed for either ``male`` or ``female``. ``None`` disables
+            balancing. Unknown labels are never capped.
     """
 
     output_dir: Path | str = "id_faces"
@@ -374,6 +377,7 @@ class GenerationConfig:
     source_retries: int = 2
     source_backoff_s: float = 0.25
     source_shuffle: bool = False
+    gender_max_share: float | None = None
 
     def __post_init__(self) -> None:
         if self.count < 1:
@@ -384,6 +388,8 @@ class GenerationConfig:
             raise ValueError("source_retries must be >= 0")
         if self.source_backoff_s < 0:
             raise ValueError("source_backoff_s must be >= 0")
+        if self.gender_max_share is not None and not 0.0 < self.gender_max_share <= 1.0:
+            raise ValueError("gender_max_share must be in (0, 1]")
         low, high = self.request_sleep_s
         if low < 0 or high < low:
             raise ValueError("request_sleep_s must satisfy 0 <= low <= high")
@@ -420,6 +426,7 @@ class ImageRecord:
         background_removed: Whether background removal ran.
         frontal_filtered: Whether the run required a frontal pass.
         frontal: Pose metrics when frontal filtering ran and succeeded.
+        source_ref: Optional provenance string (local path or source URI).
         schema_version: Metadata schema version string.
     """
 
@@ -429,6 +436,7 @@ class ImageRecord:
     background_removed: bool
     frontal_filtered: bool
     frontal: FrontalMetrics | None = None
+    source_ref: str | None = None
     schema_version: MetadataSchemaVersion = MetadataSchemaVersion.V1
 
     def to_metadata(self) -> dict[str, Any]:
@@ -452,6 +460,8 @@ class ImageRecord:
         }
         if self.frontal is not None:
             payload["frontal"] = self.frontal.to_metadata()
+        if self.source_ref is not None:
+            payload["source_ref"] = self.source_ref
         return payload
 
 

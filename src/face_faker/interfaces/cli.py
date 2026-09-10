@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from face_faker._version import __version__
 from face_faker.domain.entities import FaceRegion, GenerationConfig, PoseLimits
@@ -21,6 +21,37 @@ EXIT_DEPENDENCY = 3
 EXIT_SOURCE = 4
 EXIT_INCOMPLETE = 5
 EXIT_UNEXPECTED = 10
+
+
+def _make_progress_callback(total: int) -> Callable[[int, int], None]:
+    """Build a progress callback for the CLI.
+
+    Uses tqdm when installed; otherwise prints a simple counter.
+
+    Args:
+        total: Requested image count.
+
+    Returns:
+        Callback ``(produced, requested) -> None``.
+    """
+    try:
+        from tqdm import tqdm
+    except ImportError:  # pragma: no cover - tqdm is a core dep
+
+        def _plain(produced: int, requested: int) -> None:
+            print(f"\r{produced}/{requested}", end="", flush=True)
+
+        return _plain
+
+    bar = tqdm(total=total, unit="image", desc="Generating")
+
+    def _tqdm(produced: int, requested: int) -> None:
+        bar.n = produced
+        bar.refresh()
+        if produced >= requested:
+            bar.close()
+
+    return _tqdm
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -137,6 +168,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Shuffle --source-dir listing once at start",
     )
     gen.add_argument(
+        "--gender-max-share",
+        type=float,
+        default=None,
+        help="Cap share of male/female outputs in (0,1], e.g. 0.55",
+    )
+    gen.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show a progress bar while generating",
+    )
+    gen.add_argument(
         "--no-gender",
         action="store_true",
         help="Skip gender classification",
@@ -208,10 +250,13 @@ def cmd_generate(args: argparse.Namespace) -> int:
         source_retries=args.source_retries,
         source_backoff_s=args.source_backoff,
         source_shuffle=args.source_shuffle,
+        gender_max_share=args.gender_max_share,
     )
 
+    progress_cb = _make_progress_callback(config.count) if args.progress else None
+
     try:
-        result = generate_faces(config=config)
+        result = generate_faces(config=config, progress=progress_cb)
     except FaceFakerError as exc:
         logger.error("%s", exc)
         name = type(exc).__name__

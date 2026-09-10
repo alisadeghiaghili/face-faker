@@ -71,6 +71,8 @@ class TestLocalDirectorySource:
         result = generate_faces(config, store=LocalFaceStore(out), sleep_fn=lambda s: None)
         assert result.stats.produced == 3
         assert len(list(out.glob("face_*.png"))) == 3
+        assert result.records[0].source_ref is not None
+        assert result.records[0].source_ref.endswith(".png")
 
 
 class TestThisPersonDoesNotExistSource:

@@ -334,3 +334,42 @@ def test_progress_callback(tmp_path, sleep_noop) -> None:
         progress=lambda produced, requested: seen.append((produced, requested)),
     )
     assert seen == [(1, 2), (2, 2)]
+
+
+def test_gender_max_share_caps_dominant_label(tmp_path, sleep_noop) -> None:
+    class Alternating:
+        def __init__(self) -> None:
+            self.n = 0
+
+        def classify(self, image):
+            self.n += 1
+            # male, male, female, male ...
+            return GenderLabel.MALE if self.n != 3 else GenderLabel.FEMALE
+
+    images = [make_image(color) for color in ("red", "blue", "green", "yellow", "purple", "orange")]
+    result = generate_faces(
+        _config(tmp_path, count=3, gender_max_share=0.5, max_attempts_factor=6),
+        source=FakeSource(images),
+        gender_classifier=Alternating(),
+        store=FakeStore(),
+        sleep_fn=sleep_noop,
+    )
+    # limit = ceil(3 * 0.5) = 2 → at most 2 male and 2 female
+    assert result.stats.gender_male <= 2
+    assert result.stats.gender_female <= 2
+    assert result.stats.produced >= 1
+
+
+def test_source_ref_recorded_when_available(tmp_path, sleep_noop) -> None:
+    class RefSource(FakeSource):
+        last_source_ref = "inbox/a.png"
+
+    result = generate_faces(
+        _config(tmp_path, count=1),
+        source=RefSource([make_image()]),
+        gender_classifier=FakeGenderClassifier(GenderLabel.MALE),
+        store=FakeStore(),
+        sleep_fn=sleep_noop,
+    )
+    assert result.records[0].source_ref == "inbox/a.png"
+    assert result.records[0].to_metadata()["source_ref"] == "inbox/a.png"
