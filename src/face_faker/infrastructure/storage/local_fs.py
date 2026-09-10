@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from face_faker.domain.entities import ImageRecord, records_to_csv_rows
 from face_faker.logging_config import get_logger

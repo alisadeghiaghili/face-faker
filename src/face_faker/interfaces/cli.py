@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from face_faker._version import __version__
 from face_faker.domain.entities import FaceRegion, GenerationConfig, PoseLimits
 from face_faker.domain.errors import FaceFakerError
-from face_faker.logging_config import configure_cli_logging, get_logger
 from face_faker.interfaces.api import generate_faces
+from face_faker.logging_config import configure_cli_logging, get_logger
 
 logger = get_logger("cli")
 
@@ -260,7 +259,7 @@ def cmd_info(_args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point.
 
     Args:

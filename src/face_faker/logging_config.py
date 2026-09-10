@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 LOGGER_NAME = "face_faker"
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     """Return a namespaced logger.
 
     Args:

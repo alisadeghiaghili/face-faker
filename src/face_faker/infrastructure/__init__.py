@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     """Lazily expose adapter classes on attribute access."""
     if name == "ThisPersonDoesNotExistSource":
         from face_faker.infrastructure.sources.tpnd import ThisPersonDoesNotExistSource

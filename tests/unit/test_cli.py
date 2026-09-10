@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from face_faker.domain.entities import GenerationConfig, GenerationResult, GenerationStats
 from face_faker.domain.errors import MissingModelError, SourceUnavailableError
 from face_faker.interfaces import cli

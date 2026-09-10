@@ -73,7 +73,9 @@ def rotation_vector_to_euler_degrees(
         True
     """
     rotation_mat, _ = cv2_module.Rodrigues(rotation_vector)
-    pose_mat = np_module.hstack((rotation_mat, np_module.zeros((3, 1), dtype=np.float64)))
+    pose_mat = np_module.hstack(
+        (rotation_mat, np_module.zeros((3, 1), dtype=np_module.float64))
+    )
     _, _, _, _, _, _, euler_angles = cv2_module.decomposeProjectionMatrix(pose_mat)
     pitch, yaw, roll = (float(v) for v in np_module.asarray(euler_angles).reshape(-1))
     return yaw, pitch, roll
@@ -191,20 +193,24 @@ class DlibSolvePnPFrontalFilter:
         """
         self._ensure_loaded()
         cv2, _, np = _require_cv_deps()
+        detector = self._detector
+        predictor = self._predictor
+        if detector is None or predictor is None:  # pragma: no cover - guarded above
+            raise MissingModelError("Landmark models failed to load")
 
         rgb = np.asarray(image.convert("RGB") if hasattr(image, "convert") else image)
         bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
         gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape[:2]
 
-        faces = self._detector(gray, 1)
+        faces = detector(gray, 1)
         if len(faces) == 0:
             logger.debug("No face detected for pose estimation")
             return None
 
         face_rect = faces[0]
         box = face_rect_to_box(face_rect, width=width, height=height)
-        landmarks = self._predictor(gray, face_rect)
+        landmarks = predictor(gray, face_rect)
         image_points = np.array(
             [(landmarks.part(i).x, landmarks.part(i).y) for i in _LANDMARK_INDICES],
             dtype=np.float64,

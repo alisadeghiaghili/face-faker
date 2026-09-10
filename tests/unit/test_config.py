@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -22,7 +21,9 @@ def test_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert config_mod.resolve_models_dir() == target.resolve()
 
 
-def test_landmark_model_path_joins_filename(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_landmark_model_path_joins_filename(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv(config_mod.MODELS_DIR_ENV, str(tmp_path))
     path = config_mod.landmark_model_path()
     assert path.name == config_mod.DEFAULT_LANDMARK_MODEL_NAME

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from io import BytesIO
-from typing import Any, Callable, Optional
+from typing import Any
 
 import requests
 
@@ -46,7 +47,7 @@ class ThisPersonDoesNotExistSource:
         self,
         url: str = DEFAULT_URL,
         timeout_s: float = DEFAULT_TIMEOUT_S,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
         user_agent: str = DEFAULT_USER_AGENT,
         retries: int = DEFAULT_RETRIES,
         backoff_s: float = DEFAULT_BACKOFF_S,
@@ -91,10 +92,9 @@ class ThisPersonDoesNotExistSource:
                     logger.warning("TPNDE returned HTTP %s", response.status_code)
                     return None
                 else:
-                    image = Image.open(BytesIO(response.content))
-                    image.load()
-                    if image.mode != "RGB":
-                        image = image.convert("RGB")
+                    raw = Image.open(BytesIO(response.content))
+                    raw.load()
+                    image = raw if raw.mode == "RGB" else raw.convert("RGB")
                     return image
             except Exception as exc:  # noqa: BLE001 - batch must not crash
                 last_error = exc

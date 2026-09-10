@@ -5,8 +5,9 @@ from __future__ import annotations
 import random
 import time
 import warnings
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from PIL import Image, ImageOps
 
@@ -98,7 +99,7 @@ def _finalize_pixels(image: Image.Image, *, grayscale: bool, remove_bg: bool) ->
         alpha = image.getchannel("A")
         gray = image.convert("RGB").convert("L")
         out = Image.new("LA", gray.size)
-        out.putdata(list(zip(gray.getdata(), alpha.getdata())))
+        out.putdata(list(zip(gray.getdata(), alpha.getdata(), strict=True)))
         return out
     return ImageOps.grayscale(image)
 
@@ -106,13 +107,13 @@ def _finalize_pixels(image: Image.Image, *, grayscale: bool, remove_bg: bool) ->
 def generate_faces(
     config: GenerationConfig,
     *,
-    source: Optional[FaceSource] = None,
-    frontal_filter: Optional[FrontalFilter] = None,
-    gender_classifier: Optional[GenderClassifier] = None,
-    background_remover: Optional[BackgroundRemover] = None,
-    store: Optional[FaceStore] = None,
+    source: FaceSource | None = None,
+    frontal_filter: FrontalFilter | None = None,
+    gender_classifier: GenderClassifier | None = None,
+    background_remover: BackgroundRemover | None = None,
+    store: FaceStore | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
-    progress: Optional[ProgressCallback] = None,
+    progress: ProgressCallback | None = None,
 ) -> GenerationResult:
     """Generate a synthetic face dataset according to ``config``.
 

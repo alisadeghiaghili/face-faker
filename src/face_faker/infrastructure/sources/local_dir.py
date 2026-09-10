@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from face_faker.logging_config import get_logger
 
@@ -100,10 +101,9 @@ class LocalDirectorySource:
         path = self._files[self._index % len(self._files)]
         self._index += 1
         try:
-            image = Image.open(path)
-            image.load()
-            if image.mode != "RGB":
-                image = image.convert("RGB")
+            raw = Image.open(path)
+            raw.load()
+            image = raw if raw.mode == "RGB" else raw.convert("RGB")
             return image
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to read %s: %s", path, exc)

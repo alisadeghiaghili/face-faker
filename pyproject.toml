@@ -92,7 +92,25 @@ target-version = "py310"
 select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 strict = true
 packages = ["face_faker"]
 mypy_path = "src"
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "cv2",
+    "dlib",
+    "deepface",
+    "rembg",
+    "cv2.*",
+    "dlib.*",
+    "deepface.*",
+    "rembg.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+ignore_errors = true

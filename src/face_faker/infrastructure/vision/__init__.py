@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     """Lazily expose vision adapters."""
     if name == "DeepFaceGenderClassifier":
         from face_faker.infrastructure.vision.deepface_gender import (

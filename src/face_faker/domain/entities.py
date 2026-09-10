@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from face_faker.domain.enums import GenderLabel, MetadataSchemaVersion
 
@@ -54,7 +55,7 @@ class PoseLimits:
             _require_non_negative(name, getattr(self, name))
 
     @classmethod
-    def symmetric(cls, yaw: float, pitch: float, roll: float) -> "PoseLimits":
+    def symmetric(cls, yaw: float, pitch: float, roll: float) -> PoseLimits:
         """Build limits where left/right and up/down share one value.
 
         Args:

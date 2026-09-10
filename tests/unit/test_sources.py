@@ -51,8 +51,8 @@ class TestLocalDirectorySource:
         assert source.file_count == 1
 
     def test_generate_from_local_dir(self, tmp_path: Path) -> None:
-        from face_faker.domain.entities import GenerationConfig
         from face_faker.application.generate_faces import generate_faces
+        from face_faker.domain.entities import GenerationConfig
         from face_faker.infrastructure.storage.local_fs import LocalFaceStore
 
         inbox = tmp_path / "inbox"
